@@ -9,10 +9,6 @@
 /out/
 /build
 
-# Convex
-convex/_generated/
-.convex/
-
 # Runtime data
 pids
 *.pid
