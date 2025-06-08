@@ -1,0 +1,21 @@
+services:
+  app:
+    build: 
+      context: ../
+      dockerfile: ./docker/Dockerfile.devEnv
+    volumes:
+      - ../:/app:delegated                    # Source code mounting
+      - volume-pnpm-store:/app/.pnpm-store    # Package cache persistence
+    working_dir: /app
+    ports:
+      - "3000:3000"
+      - "3001:3001"  # Convex dev server
+    env_file:
+      - ../.env
+      - ../.env.local
+      - ../.env.development
+      - ../.env.development.local
+    command: pnpm dev
+
+volumes:
+  volume-pnpm-store:      # Persist package manager cache 

@@ -1,0 +1,372 @@
+---
+description: project architecture patterns
+globs: 
+alwaysApply: false
+---
+# T3 Chat Clone - Architecture Patterns
+
+## 🏗️ Core Architecture
+
+### Data Flow Pattern
+```
+User Input → Clerk Auth → Convex Functions → AI SDK → Streaming Response
+     ↓                      ↓                    ↓
+Real-time UI ← Convex Subscriptions ← Message Storage
+     ↓
+Payment Events → Stripe Webhooks → Usage Tracking
+```
+
+### User Lifecycle
+```
+1. Sign up (Clerk) → 2. Create user record (Convex) → 3. Free tier access
+4. Upgrade intent → 5. Stripe checkout → 6. Webhook updates tier
+7. Premium access → 8. Enhanced features
+```
+
+## 📁 File Structure Patterns
+
+### Required Directory Structure
+```
+/app
+  /api
+    /chat/route.ts        # AI streaming endpoint
+    /webhooks
+      /stripe/route.ts    # Payment webhooks
+  /chat/page.tsx          # Main chat interface
+  /auth
+    /sign-in/page.tsx     # Clerk sign-in
+    /sign-up/page.tsx     # Clerk sign-up
+  layout.tsx              # Root layout with providers
+  page.tsx                # Landing page
+
+/convex
+  schema.ts               # Database schema
+  users.ts                # User management functions
+  messages.ts             # Chat message functions
+  auth.config.ts          # Clerk integration
+
+/components
+  /ui                     # ShadCN components
+  /chat                   # Custom chat components
+    ChatInterface.tsx
+    MessageList.tsx
+    MessageInput.tsx
+  /auth                   # Auth-related components
+  /payments               # Stripe components
+
+/lib
+  stripe.ts               # Stripe client setup
+  utils.ts                # Utility functions
+  constants.ts            # App constants
+
+/types
+  index.ts                # TypeScript definitions
+  convex.ts               # Convex types
+  stripe.ts               # Stripe types
+```
+
+## 🔐 Authentication Patterns
+
+### Clerk + Convex Integration
+```typescript
+// convex/auth.config.ts
+import { convexAuth } from "@convex-dev/auth/server";
+
+export const { auth, signIn, signOut, store } = convexAuth({
+  providers: [/* Clerk providers */],
+});
+
+// app/api/convex/auth/route.ts
+export const { GET, POST } = auth;
+
+// Convex function with auth
+export const createMessage = mutation({
+  args: { content: v.string() },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+    
+    // Use identity.subject as primary key
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", q => q.eq("clerkId", identity.subject))
+      .unique();
+      
+    // Create message logic
+  },
+});
+```
+
+### Protected Route Pattern
+```typescript
+// app/chat/page.tsx
+import { auth } from '@clerk/nextjs/server';
+import { redirect } from 'next/navigation';
+
+export default async function ChatPage() {
+  const { userId } = await auth();
+  
+  if (!userId) {
+    redirect('/auth/sign-in');
+  }
+  
+  return <ChatInterface />;
+}
+```
+
+## 💬 Chat Implementation Patterns
+
+### Vercel AI SDK Integration
+```typescript
+// app/api/chat/route.ts
+import { streamText } from 'ai';
+import { openai } from '@ai-sdk/openai';
+
+export async function POST(req: Request) {
+  const { messages, provider = 'openai' } = await req.json();
+  
+  const modelMap = {
+    openai: openai('gpt-4'),
+    anthropic: anthropic('claude-3-sonnet'),
+  };
+  
+  const result = streamText({
+    model: modelMap[provider],
+    messages,
+    onFinish: async ({ response }) => {
+      // Save to Convex
+      await saveChat({ messages: [...messages, ...response.messages] });
+    },
+  });
+  
+  return result.toDataStreamResponse();
+}
+
+// components/chat/ChatInterface.tsx
+'use client';
+import { useChat } from '@ai-sdk/react';
+
+export default function ChatInterface() {
+  const { messages, input, handleSubmit, handleInputChange } = useChat({
+    api: '/api/chat',
+  });
+  
+  return (
+    <div className="flex flex-col h-screen">
+      <MessageList messages={messages} />
+      <MessageInput 
+        input={input}
+        handleSubmit={handleSubmit}
+        handleInputChange={handleInputChange}
+      />
+    </div>
+  );
+}
+```
+
+### Real-time Message Sync
+```typescript
+// convex/messages.ts
+export const getMessages = query({
+  args: { chatId: v.id("chats") },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("messages")
+      .withIndex("by_chat", q => q.eq("chatId", args.chatId))
+      .order("desc")
+      .collect();
+  },
+});
+
+// components/chat/MessageList.tsx
+import { useQuery } from "convex/react";
+import { api } from "../../convex/_generated/api";
+
+export default function MessageList({ chatId }: { chatId: string }) {
+  const messages = useQuery(api.messages.getMessages, { chatId });
+  
+  return (
+    <div className="flex-1 overflow-y-auto">
+      {messages?.map(message => (
+        <MessageBubble key={message._id} message={message} />
+      ))}
+    </div>
+  );
+}
+```
+
+## 💳 Payment Integration Patterns
+
+### Stripe + Convex Integration
+```typescript
+// convex/users.ts
+export const updateUserTier = mutation({
+  args: { 
+    clerkId: v.string(), 
+    tier: v.union(v.literal("free"), v.literal("premium")),
+    stripeCustomerId: v.optional(v.string())
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", q => q.eq("clerkId", args.clerkId))
+      .unique();
+      
+    if (!user) throw new Error("User not found");
+    
+    await ctx.db.patch(user._id, {
+      tier: args.tier,
+      stripeCustomerId: args.stripeCustomerId,
+      updatedAt: Date.now(),
+    });
+  },
+});
+
+// app/api/webhooks/stripe/route.ts
+import { stripe } from '@/lib/stripe';
+import { api } from '@/convex/_generated/api';
+
+export async function POST(req: Request) {
+  const signature = req.headers.get('stripe-signature');
+  const body = await req.text();
+  
+  const event = stripe.webhooks.constructEvent(
+    body,
+    signature!,
+    process.env.STRIPE_WEBHOOK_SECRET!
+  );
+  
+  if (event.type === 'customer.subscription.created') {
+    const subscription = event.data.object;
+    const clerkId = subscription.metadata.clerkId;
+    
+    await convex.mutation(api.users.updateUserTier, {
+      clerkId,
+      tier: "premium",
+      stripeCustomerId: subscription.customer as string,
+    });
+  }
+  
+  return new Response('OK');
+}
+```
+
+## 📊 Data Schema Patterns
+
+### Convex Schema Definition
+```typescript
+// convex/schema.ts
+import { defineSchema, defineTable } from "convex/server";
+import { v } from "convex/values";
+
+export default defineSchema({
+  users: defineTable({
+    clerkId: v.string(),
+    email: v.string(),
+    name: v.optional(v.string()),
+    tier: v.union(v.literal("free"), v.literal("premium")),
+    stripeCustomerId: v.optional(v.string()),
+    usage: v.object({
+      tokensUsed: v.number(),
+      messagesCount: v.number(),
+      lastReset: v.number(),
+    }),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_clerk_id", ["clerkId"]),
+  
+  chats: defineTable({
+    userId: v.id("users"),
+    title: v.optional(v.string()),
+    provider: v.string(), // "openai", "anthropic"
+    model: v.string(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_user", ["userId"]),
+  
+  messages: defineTable({
+    chatId: v.id("chats"),
+    role: v.union(v.literal("user"), v.literal("assistant")),
+    content: v.string(),
+    tokens: v.optional(v.number()),
+    createdAt: v.number(),
+  }).index("by_chat", ["chatId"]),
+});
+```
+
+## 🔄 State Management Patterns
+
+### Client State with React
+```typescript
+// No external state management needed
+// Use React built-ins + Convex subscriptions + AI SDK hooks
+
+// For chat: useChat hook
+// For auth: Clerk hooks (useUser, useAuth)
+// For data: Convex hooks (useQuery, useMutation)
+// For payments: Stripe hooks + local state
+```
+
+### Error Handling Patterns
+```typescript
+// components/ErrorBoundary.tsx
+'use client';
+import { useEffect } from 'react';
+
+export default function ErrorBoundary({
+  error,
+  reset,
+}: {
+  error: Error & { digest?: string };
+  reset: () => void;
+}) {
+  useEffect(() => {
+    console.error(error);
+  }, [error]);
+
+  return (
+    <div className="flex flex-col items-center justify-center p-4">
+      <h2 className="text-xl font-semibold mb-2">Something went wrong!</h2>
+      <button
+        onClick={reset}
+        className="px-4 py-2 bg-blue-500 text-white rounded"
+      >
+        Try again
+      </button>
+    </div>
+  );
+}
+```
+
+## 🚀 Performance Patterns
+
+### Optimization Strategies
+- **Streaming**: Always use AI SDK streaming
+- **Real-time**: Leverage Convex subscriptions 
+- **Caching**: Use React Query patterns with Convex
+- **Code Splitting**: Dynamic imports for heavy components
+- **Image Optimization**: Next.js Image component
+- **Bundle Analysis**: Regular bundle size monitoring
+
+### Mobile-First Patterns
+```typescript
+// Responsive design utility
+const useIsMobile = () => {
+  const [isMobile, setIsMobile] = useState(false);
+  
+  useEffect(() => {
+    const checkDevice = () => setIsMobile(window.innerWidth < 768);
+    checkDevice();
+    window.addEventListener('resize', checkDevice);
+    return () => window.removeEventListener('resize', checkDevice);
+  }, []);
+  
+  return isMobile;
+};
+
+// Touch-optimized chat input
+<textarea
+  className="min-h-[44px] touch-manipulation" // 44px minimum touch target
+  onTouchStart={handleTouchStart}
+/>
+```

@@ -1,0 +1,98 @@
+---
+description: project tech stack description
+globs: 
+alwaysApply: false
+---
+# T3 Chat Clone - Tech Stack Decisions
+
+## ✅ Approved Tech Stack (2025)
+
+### Frontend & UI
+- **Framework**: Next.js 15 with App Router (instant client-side navigation)
+- **Styling**: Tailwind CSS + ShadCN UI components
+- **Language**: TypeScript (strict mode)
+- **Rationale**: Modern, fast, beautiful UI out-of-the-box
+
+### Backend & Database
+- **Backend**: Convex (real-time database + serverless functions)
+- **Real-time**: Built into Convex (no Socket.io needed)
+- **Language**: TypeScript throughout
+- **Rationale**: Single backend solution, real-time by default, excellent DX
+
+### Authentication
+- **Provider**: Clerk (social login, JWT, user management)
+- **Integration**: `@clerk/nextjs` with App Router support
+- **Rationale**: Best Next.js integration, handles complex auth flows
+
+### AI & LLMs
+- **SDK**: Vercel AI SDK (`@ai-sdk/react`, `@ai-sdk/openai`)
+- **Providers**: OpenAI (primary), Anthropic, Claude
+- **Streaming**: Built-in with `useChat` hook
+- **Rationale**: Best streaming support, multi-provider, excellent DX
+
+### Payments
+- **Provider**: Stripe (subscriptions, one-time payments)
+- **Integration**: `stripe` Node.js library + webhooks
+- **Rationale**: Superior Next.js documentation, robust webhook system
+
+### Hosting & Infrastructure
+- **Hosting**: Vercel (automatic scaling, edge deployment)
+- **Streaming State**: Vercel KV (resumable streams)
+- **CDN**: Vercel edge network
+- **Rationale**: Seamless Next.js integration, global performance
+
+## ❌ Explicitly Rejected Technologies
+
+### Routing
+- **React Router**: Next.js App Router already provides instant navigation
+- **Reason**: Unnecessary complexity, potential conflicts
+
+### Backend Alternatives
+- **Firebase**: Less real-time capability than Convex
+- **Supabase**: More complex setup for real-time features
+- **Traditional REST APIs**: Convex functions are simpler
+
+### Payment Alternatives
+- **LemonSqueezy**: Less Next.js integration documentation
+- **Paddle**: More complex webhook handling
+
+### Authentication Alternatives
+- **Auth0**: More expensive, complex setup
+- **NextAuth**: More manual configuration required
+
+## 🚫 MVP Exclusions (Do Not Add)
+- **Analytics**: PostHog (add post-competition)
+- **Captcha**: hCaptcha (unnecessary complexity)
+- **Advanced Rate Limiting**: Use Convex built-in only
+- **Additional Databases**: Single source of truth with Convex
+- **Socket.io**: Convex handles real-time natively
+
+## 📦 Key Dependencies
+```json
+{
+  "@clerk/nextjs": "latest",
+  "@ai-sdk/react": "latest", 
+  "@ai-sdk/openai": "latest",
+  "convex": "latest",
+  "stripe": "latest",
+  "tailwindcss": "latest",
+  "@radix-ui/react-*": "via shadcn",
+  "typescript": "latest"
+}
+```
+
+## 🔄 Integration Patterns
+
+### Data Flow
+```
+Clerk Auth → Convex User → Chat Messages → AI Streaming → Real-time UI
+     ↓
+Stripe Payments → Usage Tracking → Rate Limiting
+```
+
+### File Structure
+- `/app` - Next.js App Router pages
+- `/convex` - Convex functions and schema
+- `/components` - ShadCN + custom components
+- `/lib` - Utility functions (Stripe, AI SDK)
+- `/types` - TypeScript definitions

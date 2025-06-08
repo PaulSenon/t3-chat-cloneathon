@@ -1,0 +1,44 @@
+---
+description: global project scope overview context
+globs: 
+alwaysApply: false
+---
+# T3 Chat Clone - Project Overview
+
+## 🎯 Mission Statement
+Win the T3 ChatCloneathon competition by building a superior multi-LLM chat application within the 3-day MVP timeline.
+
+## 🏆 Competition Context
+- **Competition**: T3 ChatCloneathon (cloneathon.t3.chat)
+- **Deadline**: June 17, 2025 at 12:00 PM PDT
+- **Prize Pool**: $10,000+ total ($5K first place)
+- **Requirements**: Open source, GitHub hosted, permissive license
+- **Judges**: Theo, Mark, Julius (vibes-based judging)
+
+## 📋 Core Requirements (Must Have)
+- Multi-LLM chat interface
+- User authentication with sync
+- Chat history persistence
+- Modern, responsive UI
+
+## 🎁 Bonus Features (Competitive Edge)
+- Resumable streams
+- Syntax highlighting
+- File attachments (images/PDFs)
+- Image generation
+- Chat branching/sharing
+- Web search integration
+
+## 🎯 Success Criteria
+1. **Functionality**: All core requirements working flawlessly
+2. **Performance**: Instant navigation, fast streaming responses
+3. **Design**: Beautiful, modern UI that impresses judges
+4. **Innovation**: Unique features that stand out (resumable streams)
+5. **Code Quality**: Clean, maintainable, well-documented code
+
+## ⚡ Development Philosophy
+- **Speed over perfection** during MVP phase
+- **Quality over quantity** - polish core features
+- **Mobile-first** responsive design
+- **Real-time everything** - leverage Convex capabilities
+- **TypeScript-first** for reliability and developer experience

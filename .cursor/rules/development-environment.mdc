@@ -1,0 +1,369 @@
+---
+description: how to use the development environment (fully dockerized)
+globs: 
+alwaysApply: false
+---
+# Development Environment - Docker-Based Zero Dependency Policy
+
+## 🐳 Core Philosophy
+
+**ZERO DEPENDENCY POLICY**: Nothing should be installed on the host machine except Docker and make. All development tools, runtimes, and dependencies run inside containers.
+
+## 📁 Required Project Structure
+
+Every project must follow this containerized development pattern:
+
+```
+project-root/
+├── docker/
+│   ├── Dockerfile.devEnv           # Development environment image
+│   ├── Dockerfile.prod             # Production build image (optional)
+│   └── docker-compose.dev.yml      # Development services
+├── Makefile                        # Container command interface
+├── package.json                    # Node.js project definition
+├── pnpm-lock.yaml                  # Dependency lockfile
+├── .env                            # Public environment variables
+├── .env.local                      # Local secrets (gitignored)
+└── .env.development.local          # Dev secrets (gitignored)
+```
+
+## 🛠️ Standard Development Environment Setup
+
+### Dockerfile.devEnv Pattern
+```dockerfile
+# Development environment base image
+FROM node:22-slim
+
+WORKDIR /app
+
+COPY package.json .
+COPY pnpm-lock.yaml .
+
+# Install system dependencies and package manager
+RUN apt-get update && \
+    apt-get install -y git make nano curl && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* && \
+    npm install -g corepack && \
+    corepack enable && \
+    corepack prepare --activate
+
+# Dependencies installed at runtime, not build time
+CMD ["bash"]
+```
+
+### Docker Compose Development Services
+```yaml
+# docker/docker-compose.dev.yml
+services:
+  app:
+    build: 
+      context: ../
+      dockerfile: ./docker/Dockerfile.devEnv
+    volumes:
+      - ../:/app:delegated                    # Source code mounting
+      - volume-pnpm-store:/app/.pnpm-store    # Package cache persistence
+    working_dir: /app
+    ports:
+      - "3000:3000"
+    env_file:
+      - ../.env
+      - ../.env.local
+      - ../.env.development
+      - ../.env.development.local
+    command: pnpm dev
+
+  # Additional services (database, etc.)
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: myapp
+    ports:
+      - "5432:5432"
+    volumes:
+      - volume-postgres-data:/var/lib/postgresql/data
+
+volumes:
+  volume-pnpm-store:      # Persist package manager cache
+  volume-postgres-data:   # Persist database data
+```
+
+## 🔧 Required Makefile Commands
+
+### Essential Command Structure
+Every project MUST implement these standardized make commands:
+
+```makefile
+SHELL := /bin/bash
+COMPOSE_PROJECT_NAME = my-app
+DOCKER_COMPOSE_FILE = ./docker/docker-compose.dev.yml
+COMPOSE = docker compose --file $(DOCKER_COMPOSE_FILE) --project-name $(COMPOSE_PROJECT_NAME)
+
+# Smart container execution - runs in existing container or starts new one
+define run_in_container_smart
+	@if [ $$( $(COMPOSE) ps --status running --services | grep -c app) -gt 0 ]; then \
+		echo "Container running, executing directly..."; \
+		$(COMPOSE) exec app $(1); \
+	else \
+		echo "Starting container and running command..."; \
+		$(COMPOSE) run --rm --service-ports app $(1) && \
+		$(MAKE) stop; \
+	fi
+endef
+
+# REQUIRED COMMANDS (must be implemented in every project)
+install: ## Install everything needed for development
+	$(MAKE) docker-build
+	$(call run_in_container_smart,pnpm install)
+
+dev: ## Start development server
+	$(call run_in_container_smart,pnpm run dev)
+
+bash: ## Access container shell
+	$(call run_in_container_smart,bash)
+
+run: ## Run arbitrary command in container (for LLM agents)
+	$(call run_in_container_smart,$(cmd))
+
+clean: ## Clean everything (containers, volumes, dependencies)
+	$(COMPOSE) down --rmi all --volumes --remove-orphans
+	rm -rf .next .vercel node_modules
+
+stop: ## Stop all containers
+	$(COMPOSE) down --remove-orphans
+
+# UTILITY COMMANDS
+docker-build: ## Build development image
+	$(COMPOSE) build
+
+docker-build-force: ## Force rebuild image
+	$(COMPOSE) build --no-cache
+
+help: ## Show available commands
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
+```
+
+## 🚀 Creating New Project From Scratch
+
+### Step 1: Initialize Project Structure
+```bash
+# On host machine (only Docker and make required)
+mkdir my-new-project && cd my-new-project
+mkdir docker
+touch docker/Dockerfile.devEnv
+touch docker/docker-compose.dev.yml
+touch Makefile
+touch package.json
+```
+
+### Step 2: Create Development Environment Files
+```bash
+# Copy the standard Dockerfile.devEnv pattern
+# Copy the standard docker-compose.dev.yml pattern
+# Copy the standard Makefile pattern
+```
+
+### Step 3: Initialize Package.json
+```json
+{
+  "name": "my-new-project",
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "packageManager": "pnpm@9.0.0"
+}
+```
+
+### Step 4: First Setup
+```bash
+make install  # This builds containers and installs dependencies
+make dev      # Start development server
+```
+
+## 🤖 LLM Agent Command Execution Rules
+
+### CRITICAL: All Commands Must Run in Container
+```bash
+# ❌ NEVER run commands directly on host
+npm install package-name
+pnpm add @types/node
+next build
+
+# ✅ ALWAYS use make run cmd="..."
+make run cmd="npm install package-name"
+make run cmd="pnpm add @types/node"
+make run cmd="next build"
+```
+
+### Standard Command Patterns for LLMs
+```bash
+# Installing dependencies
+make run cmd="pnpm add @clerk/nextjs @ai-sdk/react"
+make run cmd="pnpm add -D @types/node typescript"
+
+# Running scripts
+make run cmd="pnpm run build"
+make run cmd="pnpm run test"
+make run cmd="npx shadcn-ui@latest init"
+
+# File operations (if needed)
+make run cmd="ls -la"
+make run cmd="cat package.json"
+
+# Starting development
+make dev
+
+# Accessing shell for complex operations
+make bash
+```
+
+### Path Awareness for LLMs
+```bash
+# Container working directory is always /app
+# Host paths like /Users/user/project become /app in container
+# Volume mounts preserve file changes between host and container
+
+# When referencing files in container:
+make run cmd="ls /app/src"           # Container path
+make run cmd="cat /app/package.json" # Container path
+```
+
+## 🔄 Volume Management Strategy
+
+### Required Volumes
+```yaml
+volumes:
+  # Package manager cache (critical for performance)
+  volume-pnpm-store:
+  
+  # Database data (if applicable)
+  volume-postgres-data:
+  
+  # Build cache (optional, for faster builds)
+  volume-next-cache:
+```
+
+### Volume Naming Convention
+```
+volume-{service}-{type}:
+  volume-pnpm-store        # Package manager cache
+  volume-postgres-data     # Database data
+  volume-redis-data        # Redis data
+  volume-build-cache       # Build artifacts
+```
+
+## 🏭 Production Setup (Optional)
+
+### Dockerfile.prod Pattern
+```dockerfile
+# Production build image
+FROM node:22-slim AS base
+
+WORKDIR /app
+COPY package.json pnpm-lock.yaml ./
+RUN npm install -g corepack && corepack enable
+
+FROM base AS deps
+RUN pnpm install --frozen-lockfile
+
+FROM base AS builder
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+RUN pnpm run build
+
+FROM base AS runner
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/public ./public
+COPY --from=deps /app/node_modules ./node_modules
+COPY package.json ./
+
+EXPOSE 3000
+CMD ["pnpm", "start"]
+```
+
+### Production Commands
+```makefile
+# Additional production commands
+prod-build: ## Build production image
+	docker build -f docker/Dockerfile.prod -t my-app:prod .
+
+prod-run: ## Run production build locally
+	docker run -p 3000:3000 my-app:prod
+
+prod-test: ## Test production build
+	$(MAKE) prod-build
+	$(MAKE) prod-run
+```
+
+## 🔒 Environment Variable Management
+
+### Environment File Hierarchy
+```bash
+# Load order (later files override earlier ones)
+.env                    # Public, committed
+.env.local             # Private, gitignored
+.env.development       # Dev public, committed
+.env.development.local # Dev private, gitignored
+.env.production        # Prod public, committed
+.env.production.local  # Prod private, gitignored
+```
+
+### Auto-Creation Pattern
+```makefile
+create-env-files: ## Create required environment files
+	@if [ ! -f .env.local ]; then \
+		echo "# LOCAL SECRETS - NEVER COMMIT" > .env.local; \
+	fi
+	@if [ ! -f .env.development.local ]; then \
+		echo "# DEV SECRETS - NEVER COMMIT" > .env.development.local; \
+	fi
+```
+
+## 🚨 Critical Rules for LLMs
+
+### Container-First Mindset
+1. **NEVER assume host dependencies** - Everything runs in containers
+2. **ALWAYS use `make run cmd="..."`** for package management
+3. **ALWAYS use `make dev`** to start development servers
+4. **ALWAYS use `make bash`** for interactive shell access
+5. **UNDERSTAND path mapping** - `/app` in container = project root on host
+
+### Standard Workflow
+```bash
+# Starting new work session
+make dev              # Start development environment
+
+# Installing new dependencies
+make run cmd="pnpm add new-package"
+
+# Running one-off commands
+make run cmd="npx some-command"
+
+# Accessing shell for complex operations
+make bash
+
+# Cleaning up
+make stop            # Stop containers
+make clean           # Full cleanup (when needed)
+```
+
+### Debugging Container Issues
+```bash
+# Check running containers
+make run cmd="ps aux"
+
+# Check container logs
+docker compose -f docker/docker-compose.dev.yml logs app
+
+# Force rebuild if issues
+make docker-build-force
+make install
+```
+
+This environment ensures consistent, reproducible development across all machines while maintaining zero host dependencies.

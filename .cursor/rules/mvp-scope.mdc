@@ -1,0 +1,149 @@
+---
+description: project mvp scope context
+globs: 
+alwaysApply: false
+---
+# T3 Chat Clone - MVP Scope Definition
+
+## ✅ IN SCOPE (3-Day MVP)
+
+### Core Features (Must Ship)
+- **Multi-LLM Chat Interface**
+  - OpenAI GPT-4/GPT-3.5 integration
+  - Anthropic Claude integration
+  - Provider switching in UI
+  - Real-time streaming responses
+  - Message history display
+
+- **Authentication System**
+  - Clerk social login (Google, GitHub)
+  - User session management
+  - Protected routes
+  - User profile basics
+
+- **Data Persistence**
+  - Chat history storage in Convex
+  - Real-time message synchronization
+  - User-specific chat sessions
+  - Message threading
+
+- **Payment System**
+  - Free tier (limited usage)
+  - Premium tier (unlimited usage)
+  - Stripe checkout integration
+  - Basic subscription management
+
+- **UI/UX Essentials**
+  - Responsive design (mobile-first)
+  - Clean chat interface
+  - Loading states and error handling
+  - Basic settings page
+
+### Bonus Features (If Time Allows)
+- **Resumable Streams**
+  - Continue generation after page refresh
+  - Vercel KV for stream state
+  - Competitive advantage feature
+
+- **Code Syntax Highlighting**
+  - Detect and highlight code blocks
+  - Support common languages
+  - Copy-to-clipboard functionality
+
+- **Usage Tracking**
+  - Token counting per user
+  - Rate limiting based on tier
+  - Usage dashboard
+
+## ❌ OUT OF SCOPE (Post-MVP)
+
+### Advanced Chat Features
+- **Chat Branching**: Alternative conversation paths
+- **Chat Sharing**: Public/private chat links
+- **Message Reactions**: Thumbs up/down, custom reactions
+- **Message Editing**: Edit previous messages
+- **Chat Search**: Full-text search across conversations
+
+### File & Media Support
+- **File Uploads**: PDF, document processing
+- **Image Uploads**: Vision model integration
+- **Image Generation**: DALL-E, Midjourney integration
+- **Audio/Video**: Voice chat, video calls
+
+### Advanced AI Features
+- **Custom Tools**: Function calling, external APIs
+- **Web Search**: Real-time web integration
+- **Multi-modal**: Vision + text combined
+- **Custom Models**: Fine-tuned or local models
+
+### Enterprise Features
+- **Team Collaboration**: Shared workspaces
+- **Admin Dashboard**: User management, analytics
+- **Advanced Analytics**: PostHog, custom metrics
+- **Compliance**: GDPR, SOC2, audit logs
+
+### Infrastructure
+- **Advanced Rate Limiting**: Redis-based, complex algorithms
+- **Caching**: Response caching, CDN optimization
+- **Monitoring**: Error tracking, performance metrics
+- **Internationalization**: Multi-language support
+
+## 🎯 Quality Standards (Non-Negotiable)
+
+### Performance
+- **Page Load**: < 2 seconds initial load
+- **Streaming**: < 500ms first token
+- **Navigation**: Instant client-side routing
+- **Mobile**: 60fps scrolling, touch-optimized
+
+### Reliability
+- **Error Handling**: Graceful failures, retry logic
+- **TypeScript**: 100% type safety, no `any`
+- **Testing**: Core functionality covered
+- **Security**: Proper auth, input validation
+
+### User Experience
+- **Responsive**: Works on all device sizes
+- **Accessible**: Basic WCAG compliance
+- **Intuitive**: No user manual required
+- **Fast**: Everything feels instant
+
+## 🚦 Feature Prioritization
+
+### Priority 1 (Day 1)
+- Basic auth (Clerk)
+- Simple chat UI
+- Single LLM integration
+- Message persistence
+
+### Priority 2 (Day 2)
+- Multi-LLM support
+- Real-time sync
+- Payment integration
+- Mobile responsiveness
+
+### Priority 3 (Day 3)
+- Resumable streams
+- Polish and error handling
+- Rate limiting
+- Deployment
+
+## 🔄 Post-Competition Roadmap
+
+### Week 2-3
+- File upload support
+- Advanced chat features
+- Image generation
+- Performance optimization
+
+### Month 2
+- Team collaboration
+- Advanced analytics
+- Custom tools integration
+- Enterprise features
+
+### Month 3+
+- Mobile app
+- API for third-party integrations
+- Advanced AI capabilities
+- Scale optimization

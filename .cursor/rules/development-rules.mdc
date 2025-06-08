@@ -1,0 +1,294 @@
+---
+description: developement rules
+globs: 
+alwaysApply: false
+---
+# T3 Chat Clone - Development Rules
+
+## 🚫 Strict Prohibitions (Never Do)
+
+### Environment Restrictions
+- **Never install dependencies on host machine** - Follow [development-environment.mdc](mdc:development-environment.mdc) zero dependency policy
+- **Never run commands directly on host** - Always use `make run cmd="..."` for container execution
+- **Never assume host paths** - All development happens in `/app` container directory
+
+### Technology Restrictions
+- **Never add React Router** - Next.js App Router handles all routing
+- **Never use Socket.io** - Convex provides real-time subscriptions
+- **Never add Redux/Zustand** - Use React state + Convex + AI SDK hooks
+- **Never use different auth providers** - Clerk only
+- **Never add additional databases** - Convex is single source of truth
+- **Never use CSS-in-JS libraries** - Tailwind + ShadCN only
+
+### Feature Restrictions (MVP Phase)
+- **Never add file uploads** during MVP (images, PDFs, documents)
+- **Never implement chat branching** during MVP
+- **Never add custom tools/function calling** during MVP
+- **Never implement web search** during MVP
+- **Never add analytics** during MVP (PostHog comes later)
+- **Never add internationalization** during MVP
+
+### Code Quality Restrictions
+- **Never use `any` type** - Always use proper TypeScript types
+- **Never commit without types** - All functions must be typed
+- **Never skip error handling** - Every API call needs try/catch
+- **Never hardcode API keys** - Always use environment variables
+- **Never commit secrets** - Use `.env.local` for local development
+
+## ✅ Required Standards
+
+### TypeScript Standards
+```typescript
+// ✅ Good: Proper typing
+interface ChatMessage {
+  id: string;
+  content: string;
+  role: 'user' | 'assistant';
+  timestamp: number;
+}
+
+const createMessage = (content: string): ChatMessage => {
+  return {
+    id: crypto.randomUUID(),
+    content,
+    role: 'user',
+    timestamp: Date.now(),
+  };
+};
+
+// ❌ Bad: Using any
+const createMessage = (content: any): any => {
+  return { content };
+};
+```
+
+### Error Handling Standards
+```typescript
+// ✅ Good: Comprehensive error handling
+export async function POST(req: Request) {
+  try {
+    const { messages } = await req.json();
+    
+    if (!messages || !Array.isArray(messages)) {
+      return new Response('Invalid messages format', { status: 400 });
+    }
+    
+    const result = await streamText({
+      model: openai('gpt-4'),
+      messages,
+    });
+    
+    return result.toDataStreamResponse();
+  } catch (error) {
+    console.error('Chat API error:', error);
+    return new Response('Internal server error', { status: 500 });
+  }
+}
+
+// ❌ Bad: No error handling
+export async function POST(req: Request) {
+  const { messages } = await req.json();
+  const result = await streamText({ model: openai('gpt-4'), messages });
+  return result.toDataStreamResponse();
+}
+```
+
+### Component Standards
+```typescript
+// ✅ Good: Proper component structure
+interface MessageBubbleProps {
+  message: {
+    id: string;
+    content: string;
+    role: 'user' | 'assistant';
+  };
+  onCopy?: (content: string) => void;
+}
+
+export default function MessageBubble({ message, onCopy }: MessageBubbleProps) {
+  const handleCopy = useCallback(() => {
+    onCopy?.(message.content);
+  }, [message.content, onCopy]);
+
+  return (
+    <div className={cn("flex", message.role === 'user' ? 'justify-end' : 'justify-start')}>
+      {/* Component content */}
+    </div>
+  );
+}
+
+// ❌ Bad: No types, poor structure
+export default function MessageBubble({ message }) {
+  return <div>{message.content}</div>;
+}
+```
+
+## 📁 File Organization Rules
+
+### Required File Naming
+- **Components**: PascalCase (`ChatInterface.tsx`, `MessageList.tsx`)
+- **Pages**: lowercase with dashes (`sign-in/page.tsx`)
+- **API Routes**: lowercase (`/api/chat/route.ts`)
+- **Utilities**: camelCase (`utils.ts`, `constants.ts`)
+- **Types**: lowercase (`index.ts`, `convex.ts`)
+
+### Import Order Rules
+```typescript
+// 1. React and Next.js imports
+import { useState, useEffect } from 'react';
+import { redirect } from 'next/navigation';
+
+// 2. Third-party libraries
+import { useChat } from '@ai-sdk/react';
+import { useQuery } from 'convex/react';
+
+// 3. Internal utilities and types
+import { cn } from '@/lib/utils';
+import type { ChatMessage } from '@/types';
+
+// 4. Components (UI first, then custom)
+import { Button } from '@/components/ui/button';
+import { MessageBubble } from '@/components/chat/MessageBubble';
+
+// 5. Convex generated imports
+import { api } from '@/convex/_generated/api';
+```
+
+### Environment Variables Rules
+```typescript
+// ✅ Good: Proper env var handling
+const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+if (!stripeSecretKey) {
+  throw new Error('STRIPE_SECRET_KEY environment variable is required');
+}
+
+// For client-side (Next.js public vars)
+const clerkPublishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+
+// ❌ Bad: Direct usage without validation
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+```
+
+## 🎨 UI/UX Rules
+
+### Design System Rules
+- **Only use ShadCN components** - No custom UI component creation unless absolutely necessary
+- **Follow Tailwind utility-first** - No custom CSS files
+- **Mobile-first responsive design** - Always test on mobile viewport first
+- **44px minimum touch targets** - All interactive elements on mobile
+- **Consistent spacing** - Use Tailwind spacing scale (4, 8, 12, 16, 24, 32)
+
+### Color and Theme Rules
+```typescript
+// ✅ Good: Use CSS variables and Tailwind classes
+<div className="bg-background text-foreground border border-border">
+  <h1 className="text-2xl font-semibold text-primary">Chat Interface</h1>
+</div>
+
+// ❌ Bad: Hardcoded colors
+<div style={{ backgroundColor: '#ffffff', color: '#000000' }}>
+  <h1 style={{ color: '#3b82f6' }}>Chat Interface</h1>
+</div>
+```
+
+### Responsive Design Rules
+```typescript
+// ✅ Good: Mobile-first responsive design
+<div className="flex flex-col lg:flex-row gap-4 p-4 lg:p-8">
+  <aside className="w-full lg:w-64 lg:min-h-screen">
+    {/* Sidebar content */}
+  </aside>
+  <main className="flex-1 min-h-screen lg:min-h-0">
+    {/* Main content */}
+  </main>
+</div>
+
+// ❌ Bad: Desktop-first or non-responsive
+<div className="flex gap-8 p-8">
+  <aside className="w-64 min-h-screen">
+    {/* Sidebar content */}
+  </aside>
+  <main className="flex-1">
+    {/* Main content */}
+  </main>
+</div>
+```
+
+## 🔒 Security Rules
+
+### API Security
+- **Always validate input** - Never trust client data
+- **Use auth middleware** - Protect all non-public routes
+- **Sanitize user content** - Prevent XSS attacks
+- **Rate limit API endpoints** - Use Convex built-in rate limiting
+- **Validate webhook signatures** - Especially for Stripe webhooks
+
+### Environment Security
+```typescript
+// ✅ Good: Server-only secrets
+// .env.local
+STRIPE_SECRET_KEY=sk_test_...
+CONVEX_DEPLOYMENT=dev:...
+CLERK_SECRET_KEY=sk_...
+
+// .env.local for client-side
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
+NEXT_PUBLIC_CONVEX_URL=https://...
+
+// ❌ Bad: Exposing secrets to client
+NEXT_PUBLIC_STRIPE_SECRET_KEY=sk_test_... // Never do this!
+```
+
+## 📱 Performance Rules
+
+### Loading and Streaming
+- **Use Suspense boundaries** - Wrap async components
+- **Implement loading states** - Show skeletons, not blank screens
+- **Stream AI responses** - Never wait for complete response
+- **Optimize images** - Use Next.js Image component
+- **Lazy load heavy components** - Use dynamic imports
+
+### Bundle Size Rules
+```typescript
+// ✅ Good: Dynamic imports for heavy components
+const HeavyComponent = dynamic(() => import('./HeavyComponent'), {
+  loading: () => <Skeleton className="h-48 w-full" />,
+});
+
+// ❌ Bad: Import everything upfront
+import HeavyComponent from './HeavyComponent';
+import AnotherHeavyComponent from './AnotherHeavyComponent';
+```
+
+## 🧪 Testing Rules
+
+### Testing Requirements (MVP)
+- **Test core user flows** - Sign up → Chat → Payment
+- **Test API endpoints** - At least happy path
+- **Test responsive design** - Mobile and desktop
+- **Manual testing only** - No automated tests during MVP
+
+### Post-MVP Testing
+- Unit tests for utilities
+- Integration tests for API routes  
+- E2E tests for user flows
+- Performance testing
+
+## 🚀 Deployment Rules
+
+### Pre-deployment Checklist
+- [ ] All environment variables configured in Vercel
+- [ ] Stripe webhooks configured for production
+- [ ] Clerk production instance configured
+- [ ] Convex production deployment active
+- [ ] Error boundaries implemented
+- [ ] Loading states implemented
+- [ ] Mobile responsiveness verified
+- [ ] API rate limiting active
+
+### Production Monitoring
+- [ ] Check deployment logs
+- [ ] Verify all API endpoints working
+- [ ] Test payment flow end-to-end
+- [ ] Verify real-time features working
+- [ ] Test on multiple devices/browsers

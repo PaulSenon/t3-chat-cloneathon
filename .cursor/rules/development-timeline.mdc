@@ -1,0 +1,210 @@
+---
+description: mvp development timeline
+globs: 
+alwaysApply: false
+---
+# T3 Chat Clone - Development Timeline
+
+## 🚀 3-Day MVP Development Schedule
+
+### 📅 Day 1: Foundation (6-8 hours)
+
+#### Morning (3-4 hours): Project Setup
+**Hour 1-2: Environment Setup**
+```bash
+# Initial project setup (following development-environment.mdc)
+mkdir t3-chat-clone && cd t3-chat-clone
+mkdir docker
+
+# Create Docker development environment files
+# Copy Dockerfile.devEnv, docker-compose.dev.yml, Makefile patterns
+
+# Initialize project with containerized commands
+make install  # Build containers and setup environment
+make run cmd="npx create-convex@latest --template nextjs"
+make run cmd="npm install @clerk/nextjs @ai-sdk/react @ai-sdk/openai stripe"
+make run cmd="npx shadcn-ui@latest init"
+make run cmd="npx shadcn-ui@latest add button input card"
+```
+
+**Hour 3-4: Basic Configuration**
+- Configure Clerk environment variables
+- Set up Convex schema (users table)
+- Initialize basic Next.js app structure
+- Configure Tailwind + ShadCN theme
+
+#### Afternoon (3-4 hours): Core Integration
+**Hour 5-6: Authentication**
+- Implement Clerk middleware
+- Create user creation flow (Clerk → Convex)
+- Set up protected routes
+- Basic user profile page
+
+**Hour 7-8: Basic Chat UI**
+- Create chat page layout
+- Implement basic message components
+- Add input field and send button
+- Set up basic routing
+
+**End of Day 1 Deliverable:**
+✅ Working authentication system
+✅ Basic chat UI (no AI yet)
+✅ User persistence in Convex
+✅ Protected routes working
+
+### 📅 Day 2: Core Features (6-8 hours)
+
+#### Morning (3-4 hours): AI Integration
+**Hour 1-2: First LLM Connection**
+- Set up OpenAI API route (`/api/chat`)
+- Implement `useChat` hook
+- Basic streaming text responses
+- Message persistence in Convex
+
+**Hour 3-4: Multi-LLM Support**
+- Add Anthropic Claude integration
+- Create provider switching UI
+- Test multiple model responses
+- Error handling for API failures
+
+#### Afternoon (3-4 hours): Real-time & Payments
+**Hour 5-6: Real-time Sync**
+- Implement Convex real-time subscriptions
+- Sync chat messages across sessions
+- Handle connection states
+- Optimize for mobile
+
+**Hour 7-8: Payment System**
+- Set up Stripe integration
+- Create subscription tiers (free/premium)
+- Implement basic checkout flow
+- Webhook handling for subscriptions
+
+**End of Day 2 Deliverable:**
+✅ Multi-LLM chat working
+✅ Real-time message sync
+✅ Basic payment system
+✅ Mobile-responsive design
+
+### 📅 Day 3: Polish & Deploy (6-8 hours)
+
+#### Morning (3-4 hours): Advanced Features
+**Hour 1-2: Resumable Streams**
+- Set up Vercel KV for stream state
+- Implement resume functionality
+- Test across page refreshes
+- Error recovery for failed streams
+
+**Hour 3-4: Usage & Rate Limiting**
+- Implement token counting
+- Add usage tracking per user
+- Set up rate limiting (Convex)
+- Create usage dashboard
+
+#### Afternoon (3-4 hours): Final Polish
+**Hour 5-6: UI/UX Polish**
+- Loading states everywhere
+- Error boundaries and messages
+- Syntax highlighting for code
+- Copy-to-clipboard functionality
+
+**Hour 7-8: Deployment**
+- Environment variable setup
+- Vercel deployment
+- Domain configuration
+- Production testing
+
+**End of Day 3 Deliverable:**
+✅ Production-ready MVP
+✅ Resumable streams working
+✅ Rate limiting active
+✅ Deployed and accessible
+
+## ⏰ Critical Milestones
+
+### End of Hour 8 (Day 1)
+- [ ] User can sign up and log in
+- [ ] Chat UI is rendered and responsive
+- [ ] Database connection working
+
+### End of Hour 16 (Day 2)
+- [ ] AI responses streaming to chat
+- [ ] Multiple LLM providers working
+- [ ] Payment system functional
+- [ ] Real-time sync active
+
+### End of Hour 24 (Day 3)
+- [ ] App deployed to production
+- [ ] All core features working
+- [ ] Error handling robust
+- [ ] Mobile experience polished
+
+## 🚨 Risk Mitigation
+
+### Common Blockers & Solutions
+**API Key Issues**
+- Solution: Set up all API keys on Day 1
+- Backup: Use test/mock responses during development
+
+**Integration Complexity**
+- Solution: Test each integration individually
+- Backup: Simplify features if integration takes too long
+
+**Deployment Issues**
+- Solution: Deploy early and often (after Day 1)
+- Backup: Have local demo ready as fallback
+
+**Performance Problems**
+- Solution: Optimize as you build, not at the end
+- Backup: Feature flags to disable heavy features
+
+### Time Buffer Strategy
+- **Day 1**: Build buffer into Hour 7-8
+- **Day 2**: Focus on core features, skip bonuses if needed
+- **Day 3**: Prioritize deployment over additional features
+
+## 📋 Daily Checklists
+
+### Day 1 Checklist
+- [ ] Project initialized with Convex + Next.js
+- [ ] All dependencies installed
+- [ ] Clerk authentication working
+- [ ] Basic chat UI created
+- [ ] User creation flow functional
+- [ ] Environment variables configured
+
+### Day 2 Checklist
+- [ ] OpenAI integration working
+- [ ] Anthropic integration added
+- [ ] Provider switching functional
+- [ ] Message persistence in Convex
+- [ ] Real-time sync working
+- [ ] Stripe checkout implemented
+
+### Day 3 Checklist
+- [ ] Resumable streams implemented
+- [ ] Rate limiting active
+- [ ] Error handling comprehensive
+- [ ] Mobile optimization complete
+- [ ] Production deployment successful
+- [ ] All features tested end-to-end
+
+## 🎯 Success Metrics
+
+### Technical Metrics
+- **Page Load Time**: < 2 seconds
+- **First AI Response**: < 1 second
+- **Mobile Performance**: 60fps scrolling
+- **Error Rate**: < 1% of requests
+
+### Feature Completion
+- **Core Features**: 100% working
+- **Bonus Features**: At least 1 implemented
+- **UI Polish**: Professional appearance
+- **Mobile Support**: Fully responsive
+
+### Competition Readiness
+- **Demo Video**: Ready to record
+- **GitHub Repo**: Clean, documented
+- **Live Demo**: Accessible URL
+- **Code Quality**: Reviewable, maintainable
