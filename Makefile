@@ -18,10 +18,10 @@ endef
 # REQUIRED COMMANDS (must be implemented in every project)
 install: ## Install everything needed for development
 	$(MAKE) docker-build
-	$(call run_in_container_smart,pnpm install)
+	$(call run_in_container_smart,bash -c "pnpm install && pnpm dlx convex dev")
 
 dev: ## Start development server
-	$(call run_in_container_smart,pnpm run dev)
+	$(call run_in_container_smart,bash -c "pnpm dlx convex dev & pnpm run dev")
 
 bash: ## Access container shell
 	$(call run_in_container_smart,bash)
@@ -47,9 +47,13 @@ create-env-files: ## Create required environment files
 	@if [ ! -f .env.local ]; then \
 		echo "# LOCAL SECRETS - NEVER COMMIT" > .env.local; \
 	fi
-	@if [ ! -f .env.development.local ]; then \
-		echo "# DEV SECRETS - NEVER COMMIT" > .env.development.local; \
-	fi
+
+# CONVEX COMMANDS
+convex-dev: ## Start Convex development server
+	$(call run_in_container_smart,pnpm dlx convex dev)
+
+convex-deploy: ## Deploy Convex functions to production
+	$(call run_in_container_smart,pnpm dlx convex deploy --prod)
 
 help: ## Show available commands
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}' 

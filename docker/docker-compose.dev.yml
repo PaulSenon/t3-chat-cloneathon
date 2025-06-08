@@ -6,6 +6,7 @@ services:
     volumes:
       - ../:/app:delegated                    # Source code mounting
       - volume-pnpm-store:/app/.pnpm-store    # Package cache persistence
+      - volume-convex-auth:/root/.convex      # Convex auth persistence
     working_dir: /app
     ports:
       - "3000:3000"
@@ -19,3 +20,4 @@ services:
 
 volumes:
   volume-pnpm-store:      # Persist package manager cache 
+  volume-convex-auth:     # Persist Convex authentication
