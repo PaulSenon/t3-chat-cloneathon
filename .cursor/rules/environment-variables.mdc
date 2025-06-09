@@ -1,0 +1,74 @@
+---
+description: environment variable rules for project
+globs: 
+alwaysApply: false
+---
+# Environment Variables Management
+
+This project uses [@t3-oss/env-nextjs](mdc:env.ts) for type-safe environment variable validation and management.
+
+## How Environment Variables Work
+
+### Client vs Server Variables
+- **Server variables**: Defined in `server` object, accessible only on server-side
+- **Client variables**: Defined in `client` object, must be prefixed with `NEXT_PUBLIC_`
+- **Runtime mapping**: All variables must be explicitly mapped in `runtimeEnv` object
+
+### Adding New Environment Variables
+
+1. **Server-side variable**:
+   ```typescript
+   server: {
+     MY_SECRET_KEY: z.string(),
+   }
+   ```
+
+2. **Client-side variable**:
+   ```typescript
+   client: {
+     NEXT_PUBLIC_MY_API_URL: z.string(),
+   }
+   ```
+
+3. **Map in runtimeEnv**:
+   ```typescript
+   runtimeEnv: {
+     MY_SECRET_KEY: process.env.MY_SECRET_KEY,
+     NEXT_PUBLIC_MY_API_URL: process.env.NEXT_PUBLIC_MY_API_URL,
+   }
+   ```
+
+### Usage
+Import and use the validated env object:
+```typescript
+import { env } from "@/env";
+// Server: env.MY_SECRET_KEY
+// Client: env.NEXT_PUBLIC_MY_API_URL
+```
+
+## Important: Convex Exception
+
+**Do NOT use t3-oss/env for Convex environment variables.** 
+
+Convex has its own built-in environment validation at runtime. Convex variables should be:
+- Set directly in the Convex dashboard or `.env.local`
+- Accessed using `process.env.CONVEX_*` in Convex functions
+- Not added to the [env.ts](mdc:env.ts) file
+
+### Current Environment Variables
+
+#### Clerk Authentication
+- `CLERK_SECRET_KEY` (server)
+- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` (client)
+- `NEXT_PUBLIC_CLERK_FRONTEND_API_URL` (client)
+
+#### Convex Database
+- `CONVEX_DEPLOYMENT` (server)
+- `NEXT_PUBLIC_CONVEX_URL` (client)
+
+## Validation Features
+- ✅ Type safety at build time
+- ✅ Runtime validation
+- ✅ Missing variable detection
+- ✅ Invalid value detection
+- ✅ Automatic TypeScript inference
