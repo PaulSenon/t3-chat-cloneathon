@@ -7,7 +7,10 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "analyze": "cross-env ANALYZE=true next build",
+    "analyze:server": "next build --debug && npx bundlesize",
+    "perf": "npm run analyze && npm run build"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^1.2.12",
@@ -30,6 +33,7 @@
     "react-dom": "19.1.0",
     "stripe": "^18.2.1",
     "tailwind-merge": "^3.3.0",
+    "web-vitals": "^4.2.4",
     "zod": "^3.25.56"
   },
   "devDependencies": {
@@ -38,6 +42,8 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@next/bundle-analyzer": "^15.4.0",
+    "cross-env": "^7.0.3",
     "eslint": "^9",
     "eslint-config-next": "15.4.0-canary.71",
     "tailwindcss": "^4",
