@@ -1,4 +1,4 @@
 {
-  "install": "make install",
-  "start": "make dev"
+  "install": "pnpm install",
+  "start": "pnpm dev"
 }
