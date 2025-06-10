@@ -1,21 +1,24 @@
 "use client"
 
 import React from "react"
+import { useAuth } from "@clerk/nextjs"
 import { Button } from "@/components/ui/button"
-import { BotIcon, ArrowRightIcon } from "lucide-react"
+import { BotIcon, ArrowRightIcon, LogInIcon } from "lucide-react"
 import Link from "next/link"
 
 /**
  * Home page component
  * 
  * This serves as a landing page that introduces users to the chat interface.
- * In a production app, this might include:
- * - Authentication flows
+ * Features:
+ * - Authentication-aware content
  * - Feature highlights
- * - Pricing information
- * - User onboarding
+ * - Clear call-to-action based on auth state
+ * - Tech stack showcase
  */
 export default function HomePage() {
+  const { isSignedIn, isLoaded } = useAuth()
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
       <div className="container mx-auto px-4 py-16">
@@ -38,18 +41,37 @@ export default function HomePage() {
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button asChild size="lg" className="text-lg px-8">
-                <Link href="/chat">
-                  Start Chatting
-                  <ArrowRightIcon className="ml-2 h-5 w-5" />
-                </Link>
-              </Button>
+              {isLoaded && (
+                <>
+                  {isSignedIn ? (
+                    <Button asChild size="lg" className="text-lg px-8">
+                      <Link href="/chat">
+                        Start Chatting
+                        <ArrowRightIcon className="ml-2 h-5 w-5" />
+                      </Link>
+                    </Button>
+                  ) : (
+                    <div className="flex flex-col sm:flex-row gap-4">
+                      <div className="text-sm text-muted-foreground mb-2 sm:hidden">
+                        Sign in to start chatting ↗️
+                      </div>
+                      <Button variant="outline" size="lg" className="text-lg px-8" asChild>
+                        <Link href="/chat">
+                          View Demo
+                          <ArrowRightIcon className="ml-2 h-5 w-5" />
+                        </Link>
+                      </Button>
+                    </div>
+                  )}
+                </>
+              )}
               
-              <Button variant="outline" size="lg" className="text-lg px-8" asChild>
-                <Link href="/chat">
-                  View Demo
-                </Link>
-              </Button>
+              {!isLoaded && (
+                <div className="flex gap-4">
+                  <div className="h-12 w-32 bg-muted animate-pulse rounded-md" />
+                  <div className="h-12 w-24 bg-muted animate-pulse rounded-md" />
+                </div>
+              )}
             </div>
           </div>
 
@@ -77,6 +99,20 @@ export default function HomePage() {
             </div>
           </div>
 
+          {/* Authentication Info */}
+          {isLoaded && !isSignedIn && (
+            <div className="mb-12 p-6 rounded-lg bg-muted/50 border">
+              <h3 className="text-lg font-semibold mb-3 flex items-center justify-center gap-2">
+                <LogInIcon className="h-5 w-5" />
+                Get Started
+              </h3>
+              <p className="text-muted-foreground">
+                Sign up or sign in using the buttons in the top-right corner to start chatting 
+                and save your conversation history.
+              </p>
+            </div>
+          )}
+
           {/* Tech Stack */}
           <div className="border rounded-lg p-6 bg-muted/50">
             <h3 className="text-lg font-semibold mb-4">Built with Modern Technologies</h3>
@@ -85,6 +121,7 @@ export default function HomePage() {
               <span className="px-3 py-1 rounded bg-background border">React 19</span>
               <span className="px-3 py-1 rounded bg-background border">TypeScript</span>
               <span className="px-3 py-1 rounded bg-background border">Convex</span>
+              <span className="px-3 py-1 rounded bg-background border">Clerk Auth</span>
               <span className="px-3 py-1 rounded bg-background border">shadcn/ui</span>
               <span className="px-3 py-1 rounded bg-background border">Tailwind CSS</span>
               <span className="px-3 py-1 rounded bg-background border">AI SDK</span>
