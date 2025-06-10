@@ -67,10 +67,10 @@ export function ChatInterface() {
       {/* Input */}
       <div className="pointer-events-none absolute bottom-0 z-10 w-full px-4">
         <div className="relative mx-auto flex w-full max-w-3xl flex-col text-center">
-          <div className="pointer-events-auto border-reflect rounded-t-[20px] bg-accent/10 p-2 pb-0 backdrop-blur-md">
+          <div className="pointer-events-auto border-reflect rounded-t-[20px] bg-accent/50 p-2 pb-0 backdrop-blur-md">
             <form
               onSubmit={onSubmit}
-              className="flex w-full flex-col items-stretch gap-2 rounded-t-xl border border-b-0 border-white/90 bg-background/50 px-3 pt-3 text-secondary-foreground dark:border-white/10"
+              className="flex w-full flex-col items-stretch gap-2 rounded-t-xl border border-b-0 border-white/90 bg-background/50 dark:bg-background-none px-3 pt-3 text-secondary-foreground dark:border-white/10"
               style={{
                 boxShadow:
                   "rgba(0, 0, 0, 0.1) 0px 80px 50px 0px, rgba(0, 0, 0, 0.07) 0px 50px 30px 0px, rgba(0, 0, 0, 0.06) 0px 30px 15px 0px, rgba(0, 0, 0, 0.04) 0px 15px 8px, rgba(0, 0, 0, 0.04) 0px 6px 4px, rgba(0, 0, 0, 0.02) 0px 2px 2px",
@@ -83,7 +83,7 @@ export function ChatInterface() {
                     onChange={handleInputChange}
                     onKeyDown={handleKeyDown}
                     placeholder="Type your message here..."
-                    className="w-full resize-none bg-transparent text-base leading-6 text-foreground outline-none border-none shadow-none focus-visible:ring-0 placeholder:text-secondary-foreground/60 disabled:opacity-50"
+                    className="w-full resize-none bg-transparent dark:bg-transparent text-base leading-6 text-foreground outline-none border-none shadow-none focus-visible:ring-0 placeholder:text-secondary-foreground/60 disabled:opacity-50"
                     disabled={isLoading}
                     style={{ height: "48px !important" }}
                   />
