@@ -1,27 +1,26 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { cn } from "@/lib/utils";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { UserIcon, BotIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Copy, Check, SquarePen, RefreshCcw } from "lucide-react";
 import { Message } from "@/types/chat";
 
 interface ChatMessageProps {
   message: Message;
+  onRetry?: () => void;
+  onEdit?: () => void;
 }
 
 /**
- * Simple chat message component
- *
- * Basic features:
- * - Clean message display
- * - Simple avatars
- * - Copy functionality
- * - Minimal styling
+ * Clean chat message component matching the reference design
  */
 export const ChatMessage = React.memo(function ChatMessage({
   message,
+  onRetry,
+  onEdit,
 }: ChatMessageProps) {
+  const [copied, setCopied] = useState(false);
   const isUser = message.role === "user";
 
   /**
@@ -30,6 +29,8 @@ export const ChatMessage = React.memo(function ChatMessage({
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(message.content);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
     } catch (error) {
       console.error("Failed to copy message:", error);
     }
@@ -47,34 +48,76 @@ export const ChatMessage = React.memo(function ChatMessage({
   };
 
   return (
-    <div className={cn("flex gap-3", isUser && "flex-row-reverse")}>
-      <Avatar className="h-8 w-8">
-        <AvatarFallback>
-          {isUser ? (
-            <UserIcon className="h-4 w-4" />
-          ) : (
-            <BotIcon className="h-4 w-4" />
-          )}
-        </AvatarFallback>
-      </Avatar>
+    <div className={cn("flex", isUser && "justify-end")}>
+      <div
+        role="article"
+        aria-label={isUser ? "Your message" : "Assistant message"}
+        className={cn(
+          "group relative inline-block max-w-[80%] break-words rounded-xl px-4 py-3 text-left",
+          isUser
+            ? "border border-secondary/50 bg-secondary/50"
+            : "bg-transparent"
+        )}
+      >
+        <span className="sr-only">
+          {isUser ? "Your message: " : "Assistant message: "}
+        </span>
 
-      <div className="flex-1 space-y-1">
-        <div
-          className={cn(
-            "flex items-center gap-2 text-xs text-muted-foreground",
-            isUser && "flex-row-reverse"
-          )}
-        >
-          <span className="font-medium">{isUser ? "You" : "Assistant"}</span>
+        <div className="flex flex-col gap-3">
+          <div className="prose prose-pink max-w-none dark:prose-invert prose-pre:m-0 prose-pre:bg-transparent prose-pre:p-0">
+            <p className="whitespace-pre-wrap text-sm">{message.content}</p>
+          </div>
         </div>
 
-        <div
-          className={cn(
-            "rounded-lg px-3 py-2 max-w-[80%]",
-            isUser ? "bg-primary text-primary-foreground ml-auto" : "bg-muted"
+        {/* Action buttons - only show on hover */}
+        <div className="absolute right-0 mt-4 flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+          {isUser && onRetry && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 rounded-lg p-0 text-xs hover:bg-muted/40 hover:border-transparent border-transparent"
+              onClick={onRetry}
+              aria-label="Retry message"
+            >
+              <RefreshCcw className="h-4 w-4" />
+              <span className="sr-only">Retry</span>
+            </Button>
           )}
-        >
-          <div className="text-sm whitespace-pre-wrap">{message.content}</div>
+
+          {isUser && onEdit && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 rounded-lg p-0 text-xs hover:bg-muted/40 hover:border-transparent border-transparent"
+              onClick={onEdit}
+              aria-label="Edit message"
+            >
+              <SquarePen className="h-4 w-4" />
+            </Button>
+          )}
+
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 rounded-lg p-0 text-xs hover:bg-muted/40 hover:border-transparent border-transparent"
+            onClick={handleCopy}
+            aria-label="Copy message"
+          >
+            <div className="relative size-4">
+              <Copy
+                className={cn(
+                  "absolute inset-0 transition-all duration-200",
+                  copied ? "scale-0 opacity-0" : "scale-100 opacity-100"
+                )}
+              />
+              <Check
+                className={cn(
+                  "absolute inset-0 transition-all duration-200",
+                  copied ? "scale-100 opacity-100" : "scale-0 opacity-0"
+                )}
+              />
+            </div>
+          </Button>
         </div>
       </div>
     </div>

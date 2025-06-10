@@ -35,7 +35,7 @@ export default function RootLayout({
     <Providers>
       <html lang="en">
         <body
-          className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+          className={`${geistSans.variable} ${geistMono.variable} antialiased dark`}
         >
           {/* Authentication header - positioned to not interfere with chat UI */}
           <div className="fixed top-4 right-4 z-50">

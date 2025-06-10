@@ -58,7 +58,11 @@ export function UserProfileButton({ className }: UserProfileButtonProps) {
         </Button>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent className="w-64" align="end" forceMount>
+      <DropdownMenuContent
+        className="w-56 bg-background/50 backdrop-blur-md"
+        align="start"
+        forceMount
+      >
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
             <p className="text-sm font-medium leading-none">

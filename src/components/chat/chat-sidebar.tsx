@@ -36,7 +36,7 @@ export function ChatSidebar() {
   return (
     <Sidebar>
       <SidebarHeader className="p-4">
-        <h1 className="text-xl font-medium flex-grow text-center">Chat</h1>
+        <h1 className="text-xl font-medium flex-grow text-center">T4-Chat</h1>
         <Separator />
       </SidebarHeader>
       <SidebarContent className="p-2">

@@ -39,6 +39,7 @@ export function ChatInterface() {
   return (
     <div className="h-screen w-full overflow-y-scroll overscroll-contain">
       <div className="max-w-3xl mx-auto space-y-5 p-4">
+        <div className="aria-hidden h-10"></div>
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <BotIcon className="h-12 w-12 text-muted-foreground mb-4" />
@@ -60,16 +61,16 @@ export function ChatInterface() {
             />
           ))
         )}
-        <div className="h-40"></div>
+        <div className="aria-hidden h-40"></div>
       </div>
 
       {/* Input */}
-      <div className="pointer-events-none sticky bottom-0 z-10 w-full px-2">
-        <div className="pointer-events-none relative mx-auto flex w-full max-w-3xl flex-col text-center">
-          <div className="pointer-events-auto border-reflect rounded-t-[20px] bg-accent/80 p-2 pb-0 backdrop-blur-lg">
+      <div className="pointer-events-none absolute bottom-0 z-10 w-full px-4">
+        <div className="relative mx-auto flex w-full max-w-3xl flex-col text-center">
+          <div className="pointer-events-auto border-reflect rounded-t-[20px] bg-accent/10 p-2 pb-0 backdrop-blur-md">
             <form
               onSubmit={onSubmit}
-              className="flex w-full flex-col items-stretch gap-2 rounded-t-xl border border-b-0 border-white/70 bg-background/50 px-3 pt-3 text-secondary-foreground dark:border-white/10"
+              className="flex w-full flex-col items-stretch gap-2 rounded-t-xl border border-b-0 border-white/90 bg-background/50 px-3 pt-3 text-secondary-foreground dark:border-white/10"
               style={{
                 boxShadow:
                   "rgba(0, 0, 0, 0.1) 0px 80px 50px 0px, rgba(0, 0, 0, 0.07) 0px 50px 30px 0px, rgba(0, 0, 0, 0.06) 0px 30px 15px 0px, rgba(0, 0, 0, 0.04) 0px 15px 8px, rgba(0, 0, 0, 0.04) 0px 6px 4px, rgba(0, 0, 0, 0.02) 0px 2px 2px",
