@@ -1,0 +1,41 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+<ai_sdk_rules>
+- Stay with AI SDK v4 (stable) - avoid v5 alpha until post-competition stabilization
+- Use @ai-sdk/react useChat hook for chat state management
+- Implement multi-LLM support: OpenAI (primary) + Anthropic (secondary)
+- Always use streaming responses with proper loading states
+- Integrate AI SDK with existing Convex RLS system for message persistence
+- Handle connection failures gracefully with retry logic
+</ai_sdk_rules>
+
+<performance_ux_rules>
+- Target: <2s page load, <500ms first AI token response
+- Implement virtual scrolling for infinite chat history 
+- Zero Cumulative Layout Shift (CLS) during streaming
+- Use optimistic UI updates for instant message display
+- Implement smooth streaming without text jumping/reflows
+- Lazy load chat components and message history
+- Add proper loading skeletons and error boundaries
+- Mobile-first responsive design with 60fps scrolling
+</performance_ux_rules>
+
+<competition_rules>
+- Resumable streams are the key differentiator - prioritize this feature
+- Code must be competition-ready: clean, documented, deployable
+- Focus on core functionality over feature creep
+- Every feature must work flawlessly - quality over quantity
+- GitHub repo must be exemplary (judges will review code)
+</competition_rules>
+
+<convex_integration_rules>
+- Always use RLS (queryWithRLS/mutationWithRLS) for all database operations
+- Persist complete UIMessage[] arrays (not ModelMessage[]) for pixel-perfect restoration
+- Use existing schema: users, threads, messages with rich parts array
+- Integrate AI SDK message persistence in server-side onFinish callbacks
+- Handle concurrent message writes properly with optimistic updates
+- Maintain message sequencing with sequenceNumber field
+</convex_integration_rules>
