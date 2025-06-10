@@ -39,3 +39,12 @@ alwaysApply: true
 - Handle concurrent message writes properly with optimistic updates
 - Maintain message sequencing with sequenceNumber field
 </convex_integration_rules>
+
+<scratch_pad_llm>
+- you have a scratch pad file located here [CURRENT_TASK.md](mdc:.cursor/CURRENT_TASK.md) (if does not exists, you can create it)
+- this file should be maintained up to date with current scope, task, goals and resources, uri, urls needed.
+- when tackleing some work, you should read this file before doing anything as it might contain important instruction that might be outside of your context. If you are just answering user question, and you feel you have enought knowledge, you might not read it.
+- you can freely modify, remove, rewrite, restructure anything inside as you whish and at any time.
+- this content is ONLY for you. Don't care about human readability.
+- if content seems unrelated to current work, you decide what to do (rewrite, override, etc.) 
+</scratch_pad_llm>
