@@ -1,3 +1,8 @@
 {
-  "agentCanUpdateSnapshot": true
+  "build": {
+    "context": ".",
+    "dockerfile": "Dockerfile"
+  },
+  "install": "make install",
+  "start": "make dev"
 }
