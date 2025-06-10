@@ -1,0 +1,12 @@
+{
+  "buildCommand": "npx convex deploy --cmd 'pnpm build'",
+  "framework": "nextjs",
+  "functions": {
+    "src/app/api/**/*.ts": {
+      "maxDuration": 30
+    }
+  },
+  "env": {
+    "SKIP_ENV_VALIDATION": "false"
+  }
+}

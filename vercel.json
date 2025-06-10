@@ -42,14 +42,7 @@
       ]
     }
   ],
-  "rewrites": [
-    {
-      "source": "/api/chat",
-      "destination": "/api/chat"
-    }
-  ],
   "env": {
     "SKIP_ENV_VALIDATION": "false"
-  },
-  "crons": []
+  }
 }
