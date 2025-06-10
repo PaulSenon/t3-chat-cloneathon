@@ -8,6 +8,7 @@ This guide will walk you through setting up environment variables and deploying 
 - [Environment Variables](#environment-variables)
 - [Development Setup](#development-setup)
 - [Production Deployment](#production-deployment)
+- [Vercel Setup (GitHub Actions Integration)](#vercel-setup-github-actions-integration)
 - [Moving from Dev to Production](#moving-from-dev-to-production)
 - [Database Migrations](#database-migrations)
 - [CI/CD Pipeline](#cicd-pipeline)
@@ -100,36 +101,56 @@ pnpm dev
 
 ## Production Deployment
 
-### Option 1: Vercel (Recommended)
+This project uses **GitHub Actions for deployment orchestration**. Here's how it works:
 
-#### 1. Create Production Clerk Application
+```
+GitHub Actions (CI/CD) → Convex (Backend) → Vercel (Frontend)
+```
+
+**Key Point:** GitHub Actions manages both Convex and Vercel deployments to avoid conflicts.
+
+### Step 1: Create Production Services
+
+#### 1.1 Create Production Clerk Application
 
 1. In [Clerk Dashboard](https://dashboard.clerk.com), create a **new application** for production
 2. Configure your production domain in **Domains** section
 3. Copy production API keys (`pk_live_...` and `sk_live_...`)
 
-#### 2. Create Production Convex Deployment
+#### 1.2 Create Production Convex Deployment
 
 ```bash
-# Deploy to production
+# Deploy to production (this creates the prod deployment)
 npx convex deploy --prod
 
 # This generates production CONVEX_DEPLOYMENT and NEXT_PUBLIC_CONVEX_URL
 ```
 
-#### 3. Deploy to Vercel
+### Step 2: Set Up Vercel Project
 
-```bash
-# Install Vercel CLI
-npm i -g vercel
+**Important:** We'll set up Vercel but **disable automatic Git deployments** since GitHub Actions will handle them.
 
-# Deploy
-vercel
+#### 2.1 Create Vercel Project
 
-# Set environment variables in Vercel Dashboard
-```
+1. Go to [Vercel Dashboard](https://vercel.com/dashboard)
+2. Click **Add New** → **Project**
+3. **Import** your Git repository
+4. **Configure** the project settings:
+   - **Framework Preset:** Next.js
+   - **Build Command:** Leave as default (`next build`)
+   - **Output Directory:** Leave as default (`.next`)
+   - **Install Command:** `pnpm install`
 
-#### 4. Configure Environment Variables in Vercel
+#### 2.2 Disable Automatic Deployments
+
+⚠️ **Critical Step:** Disable Vercel's automatic Git integration:
+
+1. In your Vercel project dashboard
+2. Go to **Settings** → **Git**
+3. **Disconnect** your Git repository
+4. This ensures only GitHub Actions deploys to Vercel
+
+#### 2.3 Configure Environment Variables in Vercel
 
 In your Vercel project dashboard → Settings → Environment Variables:
 
@@ -142,23 +163,98 @@ CONVEX_DEPLOYMENT=prod:your-production-deployment
 NEXT_PUBLIC_CONVEX_URL=https://your-production-deployment.convex.cloud
 OPENAI_API_KEY=sk-your_openai_api_key
 ANTHROPIC_API_KEY=sk-ant-your_anthropic_api_key
+NODE_ENV=production
 ```
 
 **Preview Environment:**
-Use your **development** keys for preview deployments.
+```
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_your_dev_key
+CLERK_SECRET_KEY=sk_test_your_dev_secret
+NEXT_PUBLIC_CLERK_FRONTEND_API_URL=https://your-dev-clerk.clerk.accounts.dev
+CONVEX_DEPLOYMENT=dev:your-dev-deployment
+NEXT_PUBLIC_CONVEX_URL=https://your-dev-deployment.convex.cloud
+OPENAI_API_KEY=sk-your_openai_api_key
+ANTHROPIC_API_KEY=sk-ant-your_anthropic_api_key
+NODE_ENV=development
+```
 
-#### 5. Configure Custom Domain
+#### 2.4 Get Vercel Integration Details
 
-1. In Vercel, go to **Settings** → **Domains**
-2. Add your custom domain
-3. Update Clerk production app with your custom domain
+For GitHub Actions to deploy to Vercel, you need:
 
-### Option 2: Other Platforms
+```bash
+# Install Vercel CLI
+npm i -g vercel
 
-For other platforms (Railway, Render, etc.), the process is similar:
-1. Set up production services (Clerk, Convex)
-2. Configure environment variables
-3. Deploy using platform-specific methods
+# Login and get project details
+vercel login
+vercel link
+
+# Get your Vercel token (for GitHub secrets)
+vercel whoami
+```
+
+In Vercel Dashboard → Settings → General:
+- Copy **Project ID**
+- Copy **Team ID** (Organization ID)
+
+## Vercel Setup (GitHub Actions Integration)
+
+### How It Works
+
+```mermaid
+graph LR
+    A[Git Push] --> B[GitHub Actions]
+    B --> C[Deploy Convex]
+    B --> D[Deploy to Vercel]
+    C --> E[Production Ready]
+    D --> E
+```
+
+### Key Configuration Files
+
+#### 1. `vercel.json` (No Build Command!)
+```json
+{
+  "framework": "nextjs",
+  "functions": {
+    "src/app/api/**/*.ts": {
+      "maxDuration": 30
+    }
+  },
+  "headers": [
+    // Security headers...
+  ]
+}
+```
+
+**Why no `buildCommand`?** GitHub Actions handles Convex deployment separately.
+
+#### 2. GitHub Actions Workflow
+```yaml
+# .github/workflows/deploy.yml handles:
+- Testing & Linting
+- Convex Deployment (dev/prod)
+- Vercel Deployment (preview/prod)
+- Environment-specific configurations
+```
+
+### Deployment Flow
+
+1. **Developer pushes code**
+2. **GitHub Actions triggers**
+3. **Runs tests and linting**
+4. **Deploys Convex backend** (with environment variables)
+5. **Deploys to Vercel** (frontend only)
+6. **Vercel connects to deployed Convex**
+
+### Why This Approach?
+
+✅ **No deployment conflicts** (single source of truth)  
+✅ **Proper testing** before deployment  
+✅ **Environment isolation** (dev/preview/prod)  
+✅ **Rollback capabilities**  
+✅ **Detailed deployment logs**  
 
 ## Moving from Dev to Production
 
@@ -283,16 +379,35 @@ The project includes GitHub Actions for automated deployment:
 
 ### Required GitHub Secrets
 
-Add these to your repository secrets:
+Add these to your repository secrets (Settings → Secrets and variables → Actions):
 
 ```
-CLERK_SECRET_KEY
-CONVEX_DEPLOY_KEY
-OPENAI_API_KEY
-ANTHROPIC_API_KEY
-VERCEL_TOKEN
-VERCEL_ORG_ID
-VERCEL_PROJECT_ID
+CLERK_SECRET_KEY=sk_live_your_production_secret
+CLERK_SECRET_KEY_DEV=sk_test_your_development_secret
+CONVEX_DEPLOY_KEY=your_convex_deploy_key
+OPENAI_API_KEY=sk-your_openai_api_key
+ANTHROPIC_API_KEY=sk-ant-your_anthropic_api_key
+VERCEL_TOKEN=your_vercel_token
+VERCEL_ORG_ID=your_team_or_personal_id
+VERCEL_PROJECT_ID=your_project_id
+```
+
+### Getting GitHub Secrets Values
+
+#### Convex Deploy Key
+```bash
+# Get your Convex deploy key
+npx convex env get CONVEX_DEPLOY_KEY
+```
+
+#### Vercel Secrets
+```bash
+# Get Vercel token
+vercel whoami
+
+# Get project details (run in your project directory)
+vercel link
+# Follow prompts, then check .vercel/project.json for IDs
 ```
 
 ### Manual Deployment
@@ -352,6 +467,17 @@ Error: OpenAI API key is invalid
 - Check billing and usage limits
 - Ensure environment variable is set correctly
 
+#### 5. GitHub Actions + Vercel Conflicts
+
+```
+Multiple deployments to Convex detected
+```
+
+**Solution:**
+- Ensure Vercel Git integration is **disabled**
+- Check `vercel.json` has no `buildCommand` with Convex
+- Verify GitHub Actions is the only deployment method
+
 ### Debug Commands
 
 ```bash
@@ -366,6 +492,9 @@ npx @clerk/clerk-sdk-node --version
 
 # Check deployment status
 vercel ls
+
+# Check GitHub Actions logs
+# Go to GitHub → Actions tab → Click on workflow run
 ```
 
 ### Getting Help
@@ -392,7 +521,9 @@ vercel ls
 - [ ] Production Clerk application created
 - [ ] Production Convex deployment created
 - [ ] Custom domain configured
-- [ ] CI/CD pipeline set up
+- [ ] Vercel project set up (with Git disabled)
+- [ ] GitHub secrets configured
+- [ ] CI/CD pipeline tested
 - [ ] Security settings reviewed
 - [ ] Monitoring configured
 

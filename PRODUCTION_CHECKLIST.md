@@ -54,13 +54,27 @@ Use this checklist to ensure your T3 Chat Cloneathon is production-ready.
 
 ## 🚀 Deployment Steps
 
-### 1. Vercel Setup
+### 1. Vercel Setup (GitHub Actions Integration)
 
+⚠️ **Important:** This setup uses GitHub Actions for deployment orchestration, not Vercel's automatic Git integration.
+
+#### 1.1 Create Vercel Project
 - [ ] **Vercel account created**
 - [ ] **Project connected to Git repository**
-- [ ] **Custom domain purchased (required for production Clerk)**
+- [ ] **Framework preset set to Next.js**
+- [ ] **Build command set to default** (`next build`)
+- [ ] **Output directory set to default** (`.next`)
+
+#### 1.2 Disable Automatic Git Deployments
+- [ ] **Git integration disabled** in Vercel Settings → Git
+- [ ] **Repository disconnected** from Vercel
+- [ ] **Only GitHub Actions will trigger deployments**
+
+#### 1.3 Domain Configuration
+- [ ] **Custom domain purchased** (required for production Clerk)
 - [ ] **Domain added to Vercel project**
 - [ ] **SSL certificate verified**
+- [ ] **Domain added to production Clerk app**
 
 ### 2. Environment Variables in Vercel
 
@@ -74,6 +88,7 @@ Navigate to Vercel Dashboard → Your Project → Settings → Environment Varia
 - [ ] `NEXT_PUBLIC_CONVEX_URL` (production URL)
 - [ ] `OPENAI_API_KEY`
 - [ ] `ANTHROPIC_API_KEY`
+- [ ] `NODE_ENV=production`
 
 #### Preview Environment Variables (use dev keys)
 - [ ] `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` (pk_test_...)
@@ -83,31 +98,50 @@ Navigate to Vercel Dashboard → Your Project → Settings → Environment Varia
 - [ ] `NEXT_PUBLIC_CONVEX_URL` (dev URL)
 - [ ] `OPENAI_API_KEY`
 - [ ] `ANTHROPIC_API_KEY`
+- [ ] `NODE_ENV=development`
 
-### 3. Build Configuration
+### 3. GitHub Actions Configuration
 
-- [ ] **`vercel.json` configured**
-- [ ] **Build command includes Convex deployment**
+#### 3.1 Vercel Integration Setup
+- [ ] **Vercel CLI installed** (`npm i -g vercel`)
+- [ ] **Vercel login completed** (`vercel login`)
+- [ ] **Project linked** (`vercel link`)
+- [ ] **Vercel token obtained** (for GitHub secrets)
+- [ ] **Project ID copied** from Vercel dashboard
+- [ ] **Team ID copied** from Vercel dashboard
+
+#### 3.2 GitHub Secrets Configuration
+Add these to Repository Settings → Secrets and variables → Actions:
+
+- [ ] `CLERK_SECRET_KEY` (production: sk_live_...)
+- [ ] `CLERK_SECRET_KEY_DEV` (development: sk_test_...)
+- [ ] `CONVEX_DEPLOY_KEY` (from `npx convex env get CONVEX_DEPLOY_KEY`)
+- [ ] `OPENAI_API_KEY`
+- [ ] `ANTHROPIC_API_KEY`
+- [ ] `VERCEL_TOKEN` (from `vercel whoami`)
+- [ ] `VERCEL_ORG_ID` (Team ID from Vercel dashboard)
+- [ ] `VERCEL_PROJECT_ID` (Project ID from Vercel dashboard)
+
+#### 3.3 Workflow Configuration
+- [ ] **`.github/workflows/deploy.yml` exists**
+- [ ] **Workflow permissions set correctly**
+- [ ] **Environment protection rules configured** (optional)
+- [ ] **Branch protection rules set** (optional)
+
+### 4. Configuration Files Verification
+
+#### 4.1 `vercel.json` Configuration
+- [ ] **No `buildCommand` specified** (GitHub Actions handles Convex)
+- [ ] **Framework set to "nextjs"**
+- [ ] **API function timeouts configured**
 - [ ] **Security headers configured**
 - [ ] **CORS settings appropriate**
 
-### 4. CI/CD Pipeline (Optional but Recommended)
-
-#### GitHub Secrets Configuration
-- [ ] `VERCEL_TOKEN`
-- [ ] `VERCEL_ORG_ID`
-- [ ] `VERCEL_PROJECT_ID`
-- [ ] `CONVEX_DEPLOY_KEY`
-- [ ] `CLERK_SECRET_KEY` (production)
-- [ ] `CLERK_SECRET_KEY_DEV` (development)
-- [ ] `OPENAI_API_KEY`
-- [ ] `ANTHROPIC_API_KEY`
-
-#### Workflow Verification
-- [ ] **GitHub Actions workflow file created**
-- [ ] **Test job runs successfully**
-- [ ] **Preview deployment works**
-- [ ] **Production deployment works**
+#### 4.2 Environment Validation
+- [ ] **`env.ts` includes all required variables**
+- [ ] **AI API keys added to server validation**
+- [ ] **Client variables properly prefixed**
+- [ ] **No Convex variables in env.ts** (they have built-in validation)
 
 ## 🔍 Testing & Validation
 
@@ -119,16 +153,17 @@ Navigate to Vercel Dashboard → Your Project → Settings → Environment Varia
 - [ ] **AI chat functionality working**
 - [ ] **Error handling tested**
 
-### Staging/Preview Testing
+### GitHub Actions Testing
 
+- [ ] **Push to feature branch triggers preview deployment**
 - [ ] **Preview deployment accessible**
 - [ ] **Authentication works on preview**
 - [ ] **Database connections working**
 - [ ] **AI providers responding**
-- [ ] **Performance acceptable**
 
 ### Production Testing
 
+- [ ] **Push to main branch triggers production deployment**
 - [ ] **Production URL accessible**
 - [ ] **Custom domain working**
 - [ ] **SSL certificate valid**
@@ -147,6 +182,7 @@ Navigate to Vercel Dashboard → Your Project → Settings → Environment Varia
 - [ ] **CORS configured appropriately**
 - [ ] **Rate limiting considered**
 - [ ] **Input validation in place**
+- [ ] **Vercel Git integration disabled**
 
 ### Performance Checklist
 
@@ -164,6 +200,7 @@ Navigate to Vercel Dashboard → Your Project → Settings → Environment Varia
 - [ ] **Performance monitoring configured (optional)**
 - [ ] **Usage analytics set up (optional)**
 - [ ] **Uptime monitoring configured (optional)**
+- [ ] **GitHub Actions workflow monitoring**
 
 ### Maintenance Planning
 
@@ -183,6 +220,8 @@ Navigate to Vercel Dashboard → Your Project → Settings → Environment Varia
 | DB connection fails | Convex deployment issue | Check CONVEX_DEPLOYMENT format |
 | AI not responding | Invalid API keys | Verify OpenAI/Anthropic keys |
 | SSL errors | Domain not configured | Check domain DNS and SSL settings |
+| Double Convex deployment | Vercel Git still connected | Disable Vercel Git integration |
+| GitHub Actions failing | Missing secrets | Check all GitHub secrets are set |
 
 ### Debug Commands
 
@@ -195,6 +234,21 @@ vercel env ls
 # Production debugging
 vercel logs
 npx convex logs --prod
+
+# GitHub Actions debugging
+# Go to GitHub → Actions tab → Click on workflow run
+```
+
+### Deployment Flow Verification
+
+**Correct Flow:**
+```
+Git Push → GitHub Actions → Convex Deploy → Vercel Deploy → Live
+```
+
+**Incorrect Flow (avoid):**
+```
+Git Push → Vercel Auto-Deploy + GitHub Actions → Conflict/Double Deploy
 ```
 
 ## ✅ Final Launch Checklist
@@ -203,12 +257,14 @@ npx convex logs --prod
 
 - [ ] **All tests passing**
 - [ ] **Production environment verified**
+- [ ] **GitHub Actions workflow tested**
 - [ ] **Backup procedures tested**
 - [ ] **Team notified of launch**
 
 ### Launch Day
 
-- [ ] **Final deployment executed**
+- [ ] **Final push to main branch**
+- [ ] **GitHub Actions deployment successful**
 - [ ] **Production functionality verified**
 - [ ] **DNS propagation complete**
 - [ ] **SSL certificate active**
@@ -217,7 +273,8 @@ npx convex logs --prod
 
 ### Post-Launch (First Week)
 
-- [ ] **Monitor error rates**
+- [ ] **Monitor GitHub Actions logs**
+- [ ] **Check error rates**
 - [ ] **Check performance metrics**
 - [ ] **Verify user flows**
 - [ ] **Review usage patterns**
@@ -233,6 +290,8 @@ Your deployment is successful when:
 - ✅ **AI responses are generated**
 - ✅ **Performance meets requirements**
 - ✅ **Security headers present**
+- ✅ **GitHub Actions deploys successfully**
+- ✅ **No deployment conflicts**
 
 ---
 
@@ -242,16 +301,25 @@ If you encounter issues:
 
 1. **Check the [ENVIRONMENT_SETUP.md](./ENVIRONMENT_SETUP.md) guide**
 2. **Review the troubleshooting section above**
-3. **Check service status pages**:
+3. **Check GitHub Actions logs** in your repository
+4. **Check service status pages**:
    - [Vercel Status](https://www.vercel-status.com/)
    - [Convex Status](https://status.convex.dev/)
    - [Clerk Status](https://status.clerk.com/)
    - [OpenAI Status](https://status.openai.com/)
-4. **Join relevant Discord communities for support**
+5. **Join relevant Discord communities for support**
 
 ## 🚀 Ready to Launch?
 
 Once all items are checked off, your T3 Chat Cloneathon is ready for production!
+
+**Deployment Architecture:**
+```
+GitHub Actions (Orchestrator)
+├── Deploy Convex Backend
+├── Deploy Next.js to Vercel
+└── Verify Production Health
+```
 
 **Last Updated:** January 2025  
 **Next Review:** Before major deployments

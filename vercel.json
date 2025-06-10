@@ -1,5 +1,4 @@
 {
-  "buildCommand": "npx convex deploy --cmd 'pnpm build'",
   "framework": "nextjs",
   "functions": {
     "src/app/api/**/*.ts": {
