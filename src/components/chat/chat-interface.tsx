@@ -1,160 +1,295 @@
-"use client"
+"use client";
 
-import React from "react"
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { MenuIcon, SendIcon, UserIcon, BotIcon, PaperclipIcon, MicIcon } from "lucide-react"
-import { ChatMessage } from "./chat-message"
-import { Message } from "@/types/chat"
+import React from "react";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  MenuIcon,
+  SendIcon,
+  UserIcon,
+  BotIcon,
+  PaperclipIcon,
+  MicIcon,
+} from "lucide-react";
+import { ChatMessage } from "./chat-message";
+import { useChat } from "@ai-sdk/react";
+import { useQuery } from "convex/react";
+import { api } from "../../../convex/_generated/api";
+import { convexToAIMessages } from "@/lib/message-utils";
+import type { Id } from "../../../convex/_generated/dataModel";
 
 interface ChatInterfaceProps {
-  sidebarOpen: boolean
-  onToggleSidebar: () => void
+  sidebarOpen: boolean;
+  onToggleSidebar: () => void;
+  threadId: Id<"threads">;
 }
 
 /**
- * Mock messages for demonstration
- * TODO: Replace with actual messages from Convex
- */
-const mockMessages: Message[] = [
-  {
-    id: "1",
-    content: "Hello! I'm working on a React project and need help with TypeScript types. Can you assist me?",
-    role: "user",
-    timestamp: new Date(Date.now() - 1000 * 60 * 5) // 5 minutes ago
-  },
-  {
-    id: "2",
-    content: "I'd be happy to help you with TypeScript types in your React project! TypeScript provides excellent type safety for React components. What specific typing challenge are you facing? Are you working with:\n\n1. Component props\n2. State management\n3. Event handlers\n4. API responses\n5. Custom hooks\n\nLet me know what you're trying to type, and I'll provide detailed examples and best practices.",
-    role: "assistant",
-    timestamp: new Date(Date.now() - 1000 * 60 * 4) // 4 minutes ago
-  },
-  {
-    id: "3",
-    content: "I'm specifically struggling with typing a custom hook that manages form state. The hook needs to handle different form field types and validation.",
-    role: "user",
-    timestamp: new Date(Date.now() - 1000 * 60 * 2) // 2 minutes ago
-  }
-]
-
-/**
  * Main chat interface component
- * 
+ *
  * Features:
- * - Message history display
- * - Real-time message streaming (TODO)
+ * - Real-time AI chat with streaming responses
+ * - Message persistence via Convex RLS
  * - Chat input with auto-resize
  * - File attachment support (TODO)
  * - Voice input support (TODO)
  * - Responsive design
- * 
+ *
  * Performance considerations:
  * - Uses main page scroll instead of container overflow for better performance
  * - Implements auto-scrolling to bottom on new messages
  * - Optimized for streaming message display
  * - Prepared for future virtual scrolling implementation
  */
-export function ChatInterface({ sidebarOpen, onToggleSidebar }: ChatInterfaceProps) {
-  const [inputValue, setInputValue] = React.useState("")
-  const [isLoading, setIsLoading] = React.useState(false)
-  const messagesEndRef = React.useRef<HTMLDivElement>(null)
+export function ChatInterface({
+  sidebarOpen,
+  onToggleSidebar,
+  threadId,
+}: ChatInterfaceProps) {
+  const messagesEndRef = React.useRef<HTMLDivElement>(null);
+
+  // Load existing messages from Convex
+  const convexMessages = useQuery(api.messages.getThreadMessages, {
+    threadId,
+    paginationOpts: { numItems: 50, cursor: null },
+  });
+
+  // Convert Convex messages to AI SDK format
+  const initialMessages = React.useMemo(() => {
+    if (!convexMessages?.page) return [];
+    return convexToAIMessages(convexMessages.page);
+  }, [convexMessages]);
+
+  // AI SDK chat hook - Updated with latest v4 patterns
+  const {
+    messages,
+    input,
+    handleInputChange,
+    handleSubmit,
+    status,
+    stop,
+    error,
+    reload,
+  } = useChat({
+    api: "/api/chat",
+    id: threadId,
+    initialMessages,
+    // Use data stream protocol (default, but being explicit)
+    streamProtocol: "data",
+    // Send extra message fields like id and createdAt for proper persistence
+    sendExtraMessageFields: true,
+    // Enhanced error handling
+    onError: (error) => {
+      console.error("Chat error:", error);
+    },
+    // Optional: Add finish callback for analytics/logging
+    onFinish: (message, { usage, finishReason }) => {
+      console.log("Message completed:", {
+        messageId: message.id,
+        usage,
+        finishReason,
+      });
+    },
+  });
+
+  // Computed loading states based on status
+  const isLoading = status === "submitted" || status === "streaming";
+  const isStreaming = status === "streaming";
+
+  // Track if user is at bottom to prevent scroll jumping during streaming
+  const [isAtBottom, setIsAtBottom] = React.useState(true);
+  const [shouldAutoScroll, setShouldAutoScroll] = React.useState(true);
 
   /**
-   * Auto-scroll to bottom when new messages arrive
-   * TODO: Add logic to prevent auto-scroll if user has scrolled up
+   * Smart auto-scroll that only scrolls when user is at bottom
+   * Prevents interrupting user's scroll during streaming
    */
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }
+  const scrollToBottom = React.useCallback(() => {
+    if (shouldAutoScroll && messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [shouldAutoScroll]);
 
+  /**
+   * Check if user is at bottom of scroll container
+   */
+  const checkIfAtBottom = React.useCallback(() => {
+    const threshold = 150; // pixels from bottom
+    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+    const windowHeight = window.innerHeight;
+    const documentHeight = document.documentElement.scrollHeight;
+
+    const isNearBottom = scrollTop + windowHeight >= documentHeight - threshold;
+    setIsAtBottom(isNearBottom);
+    setShouldAutoScroll(isNearBottom);
+  }, []);
+
+  // Monitor scroll position to determine auto-scroll behavior
   React.useEffect(() => {
-    scrollToBottom()
-  }, [mockMessages])
+    const handleScroll = () => {
+      checkIfAtBottom();
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    checkIfAtBottom(); // Initial check
+
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [checkIfAtBottom]);
+
+  // Smart auto-scroll: only when at bottom
+  React.useEffect(() => {
+    if (messages.length > 0) {
+      // Always scroll for new user messages
+      const lastMessage = messages[messages.length - 1];
+      if (lastMessage?.role === "user") {
+        setShouldAutoScroll(true);
+        scrollToBottom();
+      } else if (shouldAutoScroll) {
+        // Only auto-scroll for AI messages if user is at bottom
+        scrollToBottom();
+      }
+    }
+  }, [messages, scrollToBottom, shouldAutoScroll]);
 
   /**
-   * Handle sending a new message
-   * TODO: Integrate with Convex and AI SDK
+   * Handle form submission
    */
-  const handleSendMessage = async () => {
-    if (!inputValue.trim()) return
-
-    setIsLoading(true)
-    
-    // TODO: Add message to conversation
-    console.log("Sending message:", inputValue)
-    
-    // TODO: Call AI API and stream response
-    
-    setInputValue("")
-    setIsLoading(false)
-  }
+  const onSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    handleSubmit(e);
+  };
 
   /**
    * Handle keyboard shortcuts
    */
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault()
-      handleSendMessage()
+      e.preventDefault();
+      onSubmit(e as unknown as React.FormEvent);
     }
+  };
+
+  // Show loading state while messages are being fetched
+  if (convexMessages === undefined) {
+    return (
+      <div className="flex flex-col h-full">
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-muted-foreground">Loading messages...</div>
+        </div>
+      </div>
+    );
   }
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
-      <header className="flex items-center gap-3 p-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      {/* Header - Minimalist */}
+      <header className="flex items-center gap-3 px-4 py-3 border-b">
         <Button
           variant="ghost"
           size="icon"
           onClick={onToggleSidebar}
-          className="md:hidden"
+          className="md:hidden h-8 w-8"
         >
-          <MenuIcon className="h-5 w-5" />
+          <MenuIcon className="h-4 w-4" />
         </Button>
-        
+
         <div className="flex items-center gap-2 flex-1">
-          <BotIcon className="h-5 w-5 text-primary" />
-          <h1 className="font-medium">AI Assistant</h1>
+          <div className="h-2 w-2 rounded-full bg-green-500" />
+          <span className="text-sm font-medium">Chat</span>
         </div>
 
-        {/* TODO: Add model selector, conversation settings, etc. */}
-        <div className="text-xs text-muted-foreground">
-          GPT-4 Turbo
+        {/* Minimal status and controls */}
+        <div className="flex items-center gap-2">
+          {isStreaming && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={stop}
+              className="text-xs h-7 px-2"
+            >
+              Stop
+            </Button>
+          )}
+          <div className="text-xs text-muted-foreground/70">
+            {status === "streaming" ? "●" : "○"}
+          </div>
         </div>
       </header>
 
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto relative">
         <div className="max-w-4xl mx-auto">
-          {mockMessages.length === 0 ? (
+          {messages.length === 0 ? (
             <EmptyState />
           ) : (
-            <div className="space-y-6 p-4">
-              {mockMessages.map((message) => (
+            <div className="space-y-1 p-4 pb-20">
+              {messages.map((message) => (
                 <ChatMessage
                   key={message.id}
-                  message={message}
+                  message={{
+                    id: message.id,
+                    content: message.content,
+                    role: message.role as "user" | "assistant",
+                    timestamp: message.createdAt || new Date(),
+                    isStreaming: isStreaming && message.role === "assistant",
+                  }}
                 />
               ))}
+
+              {/* Enhanced error display with retry option */}
+              {error && (
+                <div className="bg-red-50 border-l-4 border-red-400 p-4 my-4">
+                  <div className="text-red-700 text-sm">
+                    <p className="font-medium">Error: {error.message}</p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => reload()}
+                      className="mt-2 text-red-600 border-red-300 hover:bg-red-50"
+                    >
+                      Retry
+                    </Button>
+                  </div>
+                </div>
+              )}
+
               {/* Invisible div for auto-scrolling */}
               <div ref={messagesEndRef} />
             </div>
           )}
         </div>
+
+        {/* New Messages Indicator - Shows when user scrolled up */}
+        {!isAtBottom && messages.length > 0 && (
+          <div className="fixed bottom-24 left-1/2 transform -translate-x-1/2 z-10">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                setShouldAutoScroll(true);
+                scrollToBottom();
+              }}
+              className="shadow-lg bg-background/95 backdrop-blur-sm border"
+            >
+              ↓ New messages
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Input Area */}
       <div className="border-t bg-background p-4">
         <div className="max-w-4xl mx-auto">
-          <div className="flex gap-3 items-end">
+          <form onSubmit={onSubmit} className="flex gap-3 items-end">
             {/* Attachment button */}
             <Button
               variant="ghost"
               size="icon"
               className="flex-shrink-0"
               disabled={isLoading}
+              type="button"
             >
               <PaperclipIcon className="h-4 w-4" />
             </Button>
@@ -162,12 +297,12 @@ export function ChatInterface({ sidebarOpen, onToggleSidebar }: ChatInterfacePro
             {/* Message input */}
             <div className="flex-1 relative">
               <Textarea
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
+                value={input}
+                onChange={handleInputChange}
                 onKeyDown={handleKeyDown}
                 placeholder="Type your message... (Enter to send, Shift+Enter for new line)"
                 className="min-h-[20px] max-h-32 resize-none"
-                disabled={isLoading}
+                disabled={status !== "ready"}
               />
             </div>
 
@@ -177,55 +312,68 @@ export function ChatInterface({ sidebarOpen, onToggleSidebar }: ChatInterfacePro
               size="icon"
               className="flex-shrink-0"
               disabled={isLoading}
+              type="button"
             >
               <MicIcon className="h-4 w-4" />
             </Button>
 
             {/* Send button */}
             <Button
-              onClick={handleSendMessage}
-              disabled={!inputValue.trim() || isLoading}
+              type="submit"
+              disabled={!input.trim() || status !== "ready"}
               size="icon"
               className="flex-shrink-0"
             >
               <SendIcon className="h-4 w-4" />
             </Button>
-          </div>
-          
-          {/* Input footer with tips */}
+          </form>
+
+          {/* Enhanced input footer with status */}
           <div className="text-xs text-muted-foreground mt-2 text-center">
-            AI can make mistakes. Consider checking important information.
+            {status === "streaming" && "AI is responding..."}
+            {status === "submitted" && "Message sent..."}
+            {status === "ready" &&
+              "AI can make mistakes. Consider checking important information."}
+            {status === "error" && "Something went wrong. Please try again."}
           </div>
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 /**
- * Empty state component shown when no messages exist
- * TODO: Add example prompts, quick actions, etc.
+ * Empty state component shown when there are no messages
  */
 function EmptyState() {
   return (
-    <div className="flex flex-col items-center justify-center h-full p-8 text-center">
+    <div className="flex flex-col items-center justify-center h-full text-center p-8">
       <div className="max-w-md">
-        <BotIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-        <h2 className="text-xl font-medium mb-2">How can I help you today?</h2>
+        <div className="mb-4">
+          <BotIcon className="h-16 w-16 mx-auto text-muted-foreground/50" />
+        </div>
+
+        <h2 className="text-xl font-semibold mb-2">Start a conversation</h2>
+
         <p className="text-muted-foreground mb-6">
-          Start a conversation by typing a message below. I can help with coding, explanations, creative writing, and much more.
+          Ask me anything! I can help with coding, writing, analysis, and more.
         </p>
-        
-        {/* TODO: Add example prompts */}
-        <div className="grid gap-2">
-          <div className="text-sm text-muted-foreground">Try asking about:</div>
-          <div className="text-sm">
-            • &ldquo;Help me build a React component&rdquo;<br/>
-            • &ldquo;Explain TypeScript generics&rdquo;<br/>
-            • &ldquo;Write a function to sort an array&rdquo;
+
+        <div className="grid gap-2 text-sm">
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <div className="w-1 h-1 bg-current rounded-full" />
+            <span>Ask questions and get detailed answers</span>
+          </div>
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <div className="w-1 h-1 bg-current rounded-full" />
+            <span>Get help with coding and technical topics</span>
+          </div>
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <div className="w-1 h-1 bg-current rounded-full" />
+            <span>Analyze and discuss complex topics</span>
           </div>
         </div>
       </div>
     </div>
-  )
+  );
 }

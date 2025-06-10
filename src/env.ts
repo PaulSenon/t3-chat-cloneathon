@@ -13,6 +13,10 @@ export const env = createEnv({
     // Convex
     CONVEX_DEPLOYMENT: z.string(),
 
+    // AI Providers
+    OPENAI_API_KEY: z.string(),
+    ANTHROPIC_API_KEY: z.string(),
+
     // Next.js specific
     NODE_ENV: z
       .enum(["development", "test", "production"])
@@ -52,6 +56,10 @@ export const env = createEnv({
     // Convex
     CONVEX_DEPLOYMENT: process.env.CONVEX_DEPLOYMENT,
     NEXT_PUBLIC_CONVEX_URL: process.env.NEXT_PUBLIC_CONVEX_URL,
+
+    // AI Providers
+    OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+    ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
 
     // Next.js specific
     NODE_ENV: process.env.NODE_ENV,
