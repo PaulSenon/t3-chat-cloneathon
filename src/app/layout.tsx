@@ -37,18 +37,34 @@ export default function RootLayout({
         <body
           className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         >
-          {/* tmp */}
-          <header>
-            <Suspense fallback={<div>Loading...</div>}>
+          {/* Authentication header - positioned to not interfere with chat UI */}
+          <div className="fixed top-4 right-4 z-50">
+            <Suspense fallback={<div className="h-8 w-8 animate-pulse bg-muted rounded-full" />}>
               <SignedOut>
-                <SignInButton />
-                <SignUpButton />
+                <div className="flex gap-2">
+                  <SignInButton>
+                    <button className="px-4 py-2 text-sm font-medium text-primary hover:text-primary-foreground hover:bg-primary rounded-md border border-primary transition-colors">
+                      Sign In
+                    </button>
+                  </SignInButton>
+                  <SignUpButton>
+                    <button className="px-4 py-2 text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 rounded-md transition-colors">
+                      Sign Up
+                    </button>
+                  </SignUpButton>
+                </div>
               </SignedOut>
               <SignedIn>
-                <UserButton />
+                <UserButton 
+                  appearance={{
+                    elements: {
+                      avatarBox: "h-8 w-8",
+                    }
+                  }}
+                />
               </SignedIn>
             </Suspense>
-          </header>
+          </div>
           {children}
         </body>
       </html>
