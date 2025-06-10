@@ -1,6 +1,6 @@
+import "./globals.css";
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
-import "./globals.css";
 import { Providers } from "../providers";
 import {
   SignInButton,
@@ -39,7 +39,11 @@ export default function RootLayout({
         >
           {/* Authentication header - positioned to not interfere with chat UI */}
           <div className="fixed top-4 right-4 z-50">
-            <Suspense fallback={<div className="h-8 w-8 animate-pulse bg-muted rounded-full" />}>
+            <Suspense
+              fallback={
+                <div className="h-8 w-8 animate-pulse bg-muted rounded-full" />
+              }
+            >
               <SignedOut>
                 <div className="flex gap-2">
                   <SignInButton>
@@ -55,11 +59,11 @@ export default function RootLayout({
                 </div>
               </SignedOut>
               <SignedIn>
-                <UserButton 
+                <UserButton
                   appearance={{
                     elements: {
                       avatarBox: "h-8 w-8",
-                    }
+                    },
                   }}
                 />
               </SignedIn>
