@@ -8,7 +8,24 @@ import {
   aiModelProviders,
 } from "./schema";
 
-// Get messages for a thread with pagination (ordered by sequence number)
+/**
+ * Get messages for a thread with pagination (ordered by sequence number)
+ * 
+ * @description Retrieves messages for a specific thread with proper RLS security.
+ * Messages are returned in descending order (latest first) with pagination support.
+ * Only users who own the thread can access its messages.
+ * 
+ * @param threadId - The ID of the thread to get messages for
+ * @param paginationOpts - Pagination options (cursor, numItems)
+ * 
+ * @returns Paginated list of messages with continuation cursor
+ * 
+ * @throws ConvexError "Not authenticated" - User not logged in
+ * @throws ConvexError "User not found" - User record doesn't exist
+ * @throws ConvexError "Thread not found" - Thread doesn't exist
+ * @throws ConvexError "Not authorized to access this thread" - User doesn't own thread
+ * @throws ConvexError "Thread has been deleted" - Thread is soft-deleted
+ */
 export const getThreadMessages = query({
   args: {
     threadId: v.id("threads"),
@@ -55,7 +72,27 @@ export const getThreadMessages = query({
   },
 });
 
-// Create a new message shell (empty initially for streaming)
+/**
+ * Create a new message shell (empty initially for streaming)
+ * 
+ * @description Creates a new message record in "pending" status with empty parts.
+ * This supports the streaming architecture where messages are created first,
+ * then populated with content as the AI response streams in.
+ * 
+ * @param threadId - The thread to add the message to
+ * @param role - The role of the message (user, assistant, system, tool)
+ * @param parentMessageId - Optional parent message for threaded conversations
+ * @param provider - Optional AI provider (openai, anthropic)
+ * @param model - Optional specific model name
+ * 
+ * @returns The created message record
+ * 
+ * @throws ConvexError "Not authenticated" - User not logged in
+ * @throws ConvexError "User not found" - User record doesn't exist
+ * @throws ConvexError "Thread not found" - Thread doesn't exist
+ * @throws ConvexError "Not authorized to add message to this thread" - User doesn't own thread
+ * @throws ConvexError "Cannot add message to deleted thread" - Thread is deleted
+ */
 export const createMessage = mutation({
   args: {
     threadId: v.id("threads"),
@@ -134,7 +171,26 @@ export const createMessage = mutation({
   },
 });
 
-// Update message content (for streaming chunks)
+/**
+ * Update message content (for streaming chunks)
+ * 
+ * @description Updates a message's content parts during streaming.
+ * This is called repeatedly as AI response chunks arrive to build up
+ * the complete message content. Supports partial updates and status changes.
+ * 
+ * @param messageId - The message to update
+ * @param parts - Array of message parts (text, file, tool-call, etc.)
+ * @param status - Optional status update (pending, streaming, completed, error)
+ * @param usage - Optional token and tool usage statistics
+ * @param metadata - Optional metadata for the message
+ * 
+ * @returns The updated message record
+ * 
+ * @throws ConvexError "Not authenticated" - User not logged in
+ * @throws ConvexError "User not found" - User record doesn't exist
+ * @throws ConvexError "Message not found" - Message doesn't exist
+ * @throws ConvexError "Not authorized to update this message" - User doesn't own thread
+ */
 export const updateMessageContent = mutation({
   args: {
     messageId: v.id("messages"),
@@ -202,7 +258,25 @@ export const updateMessageContent = mutation({
   },
 });
 
-// Finalize message (mark as completed or error)
+/**
+ * Finalize message (mark as completed or error)
+ * 
+ * @description Marks a message as completed, error, or cancelled and updates
+ * user usage statistics. This is the final step in the message lifecycle
+ * and triggers usage tracking for billing purposes.
+ * 
+ * @param messageId - The message to finalize
+ * @param status - Final status (completed, error, cancelled)
+ * @param usage - Optional final token and tool usage statistics
+ * @param metadata - Optional final metadata
+ * 
+ * @returns The finalized message record
+ * 
+ * @throws ConvexError "Not authenticated" - User not logged in
+ * @throws ConvexError "User not found" - User record doesn't exist
+ * @throws ConvexError "Message not found" - Message doesn't exist
+ * @throws ConvexError "Not authorized to finalize this message" - User doesn't own thread
+ */
 export const finalizeMessage = mutation({
   args: {
     messageId: v.id("messages"),
@@ -306,7 +380,22 @@ export const finalizeMessage = mutation({
   },
 });
 
-// Delete message
+/**
+ * Delete message
+ * 
+ * @description Permanently deletes a message from the database.
+ * This is a hard delete operation that cannot be undone.
+ * Only the thread owner can delete messages.
+ * 
+ * @param messageId - The message to delete
+ * 
+ * @returns Success confirmation object
+ * 
+ * @throws ConvexError "Not authenticated" - User not logged in
+ * @throws ConvexError "User not found" - User record doesn't exist
+ * @throws ConvexError "Message not found" - Message doesn't exist
+ * @throws ConvexError "Not authorized to delete this message" - User doesn't own thread
+ */
 export const deleteMessage = mutation({
   args: {
     messageId: v.id("messages"),
@@ -350,7 +439,23 @@ export const deleteMessage = mutation({
   },
 });
 
-// Edit message content
+/**
+ * Edit message content
+ * 
+ * @description Updates the content parts of an existing message.
+ * This allows users to edit their messages after sending.
+ * Thread timestamps are updated to reflect the modification.
+ * 
+ * @param messageId - The message to edit
+ * @param parts - New content parts to replace existing ones
+ * 
+ * @returns The updated message record
+ * 
+ * @throws ConvexError "Not authenticated" - User not logged in
+ * @throws ConvexError "User not found" - User record doesn't exist
+ * @throws ConvexError "Message not found" - Message doesn't exist
+ * @throws ConvexError "Not authorized to edit this message" - User doesn't own thread
+ */
 export const editMessage = mutation({
   args: {
     messageId: v.id("messages"),
@@ -406,7 +511,21 @@ export const editMessage = mutation({
   },
 });
 
-// Get message by ID
+/**
+ * Get message by ID
+ * 
+ * @description Retrieves a single message by its ID with proper RLS security.
+ * Only users who own the thread can access its messages.
+ * 
+ * @param messageId - The ID of the message to retrieve
+ * 
+ * @returns The message record
+ * 
+ * @throws ConvexError "Not authenticated" - User not logged in
+ * @throws ConvexError "User not found" - User record doesn't exist
+ * @throws ConvexError "Message not found" - Message doesn't exist
+ * @throws ConvexError "Not authorized to access this message" - User doesn't own thread
+ */
 export const getMessage = query({
   args: {
     messageId: v.id("messages"),
