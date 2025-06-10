@@ -87,11 +87,12 @@ export default defineSchema({
     .index("byUserId", ["userId"])
     // .index("byParentThreadId", ["parentThreadId"]) // for forking/branching (outside of MVP scope)
     // .index("byWorkspaceId", ["workspaceId"]) // for future workspace feature (outside of MVP scope)
-    .index("byUserId&UpdatedAt", ["userId", "updatedAt"]),
-  // .index("byWorkspaceId&UpdatedAt", ["workspaceId", "updatedAt"]) // for future workspace feature (outside of MVP scope)
+    .index("byUserIdUpdatedAt", ["userId", "updatedAt"]),
+  // .index("byWorkspaceIdUpdatedAt", ["workspaceId", "updatedAt"]) // for future workspace feature (outside of MVP scope)
 
   messages: defineTable({
     threadId: v.id("threads"),
+    userId: v.id("users"), // Direct ownership for efficient RLS
     role: aiMessageRoles,
     parts: v.array(
       v.object({
@@ -116,7 +117,8 @@ export default defineSchema({
     metadata: v.optional(flexibleMetadata),
   })
     .index("byThreadId", ["threadId"])
-    .index("byThreadId&SequenceNumber", ["threadId", "sequenceNumber"])
+    .index("byUserId", ["userId"]) // Direct user ownership index
+    .index("byThreadIdSequenceNumber", ["threadId", "sequenceNumber"])
     .index("byParentMessageId", ["parentMessageId"]),
 
   // TODO: outside of MVP scope
@@ -160,7 +162,7 @@ export default defineSchema({
   //   updatedAt: v.number(),
   // })
   //   .index("byThreadId", ["threadId"])
-  //   .index("byThreadId&CreatedAt", ["threadId", "createdAt"]),
+  //   .index("byThreadIdCreatedAt", ["threadId", "createdAt"]),
 
   // Thread forks/branches (for future branching feature)
   // threadBranches: defineTable({

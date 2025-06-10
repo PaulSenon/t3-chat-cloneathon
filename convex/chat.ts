@@ -58,7 +58,7 @@ export const sendMessage = mutation({
     // Get next sequence number for user message
     const lastMessage = await ctx.db
       .query("messages")
-      .withIndex("byThreadId&SequenceNumber", (q) => q.eq("threadId", threadId))
+      .withIndex("byThreadIdSequenceNumber", (q) => q.eq("threadId", threadId))
       .order("desc")
       .first();
 
@@ -68,6 +68,7 @@ export const sendMessage = mutation({
     // Create user message
     const userMessageId = await ctx.db.insert("messages", {
       threadId,
+      userId: user._id,
       role: "user",
       parts: [
         {
@@ -88,6 +89,7 @@ export const sendMessage = mutation({
     // Create assistant message shell for streaming
     const assistantMessageId = await ctx.db.insert("messages", {
       threadId,
+      userId: user._id,
       role: "assistant",
       parts: [], // Will be populated during streaming
       sequenceNumber: userSequenceNumber + 1,
@@ -166,7 +168,7 @@ export const getConversationHistory = query({
     // Get messages in chronological order (oldest first)
     const query = ctx.db
       .query("messages")
-      .withIndex("byThreadId&SequenceNumber", (q) =>
+      .withIndex("byThreadIdSequenceNumber", (q) =>
         q.eq("threadId", args.threadId)
       )
       .order("asc");

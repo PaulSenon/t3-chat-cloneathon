@@ -15,7 +15,7 @@ export async function GET() {
 
     // Pass the token to Convex using the options parameter
     const result = await fetchQuery(
-      api.test.testAuth,
+      api.users.getCurrentUser,
       {}, // Empty args object
       { token } // Pass the token in options
     );

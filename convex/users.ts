@@ -1,9 +1,15 @@
 import { ConvexError, v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { queryWithRLS } from "./rls";
+import { mutation, internalMutation } from "./_generated/server";
 import { subscriptionTiers } from "./schema";
+import { INTERNAL_getCurrentUser } from "./lib";
 
-// Get or create user from Clerk auth
-export const getOrCreateCurrentUser = mutation({
+// ==========================================
+// USER MANAGEMENT - STANDARD PATTERN
+// ==========================================
+// Call ensureUserExists() after sign-in, then use RLS functions freely
+
+export const ensureUserExists = mutation({
   args: {},
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -37,26 +43,14 @@ export const getOrCreateCurrentUser = mutation({
   },
 });
 
-// Get current user
-export const getCurrentUser = query({
+export const getCurrentUser = queryWithRLS({
   args: {},
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      return null;
-    }
-
-    return await ctx.db
-      .query("users")
-      .withIndex("byTokenIdentifier", (q) =>
-        q.eq("tokenIdentifier", identity.tokenIdentifier)
-      )
-      .unique();
+    return await INTERNAL_getCurrentUser(ctx);
   },
 });
 
-// Update user tier (for Stripe integration)
-export const updateUserTier = mutation({
+export const updateUserTier = internalMutation({
   args: {
     tokenIdentifier: v.string(),
     tier: subscriptionTiers,

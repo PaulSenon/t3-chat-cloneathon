@@ -47,7 +47,7 @@ export const getThreadMessages = query({
 
     return await ctx.db
       .query("messages")
-      .withIndex("byThreadId&SequenceNumber", (q) =>
+      .withIndex("byThreadIdSequenceNumber", (q) =>
         q.eq("threadId", args.threadId)
       )
       .order("desc") // Latest messages first
@@ -98,7 +98,7 @@ export const createMessage = mutation({
     // Get next sequence number
     const lastMessage = await ctx.db
       .query("messages")
-      .withIndex("byThreadId&SequenceNumber", (q) =>
+      .withIndex("byThreadIdSequenceNumber", (q) =>
         q.eq("threadId", args.threadId)
       )
       .order("desc")
@@ -109,6 +109,7 @@ export const createMessage = mutation({
 
     const messageId = await ctx.db.insert("messages", {
       threadId: args.threadId,
+      userId: user._id,
       role: args.role,
       parts: [], // Start empty for streaming
       sequenceNumber,
