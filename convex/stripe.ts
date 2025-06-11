@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { mutation, query, MutationCtx } from "./_generated/server";
 import { ConvexError } from "convex/values";
 import Stripe from 'stripe';
 
@@ -74,16 +74,52 @@ export const createCheckoutSession = mutation({
     name: v.optional(v.string())
   },
   handler: async (ctx, args) => {
-    // Get or create Stripe customer
-    const result = await getOrCreateStripeCustomer(ctx, {
-      userId: args.userId,
-      email: args.email,
-      name: args.name,
-    });
+    // Look up the user record to get the Convex user ID
+    const user = await ctx.db
+      .query("users")
+      .filter((q) => q.eq(q.field("tokenIdentifier"), args.userId))
+      .unique();
+      
+    if (!user) {
+      throw new ConvexError(`User not found: ${args.userId}`);
+    }
+    
+    // Check if customer mapping already exists
+    const existingCustomer = await ctx.db
+      .query("stripeCustomers")
+      .withIndex("byUserId", (q) => q.eq("userId", user._id))
+      .unique();
+      
+    let stripeCustomerId: string;
+    
+    if (existingCustomer) {
+      stripeCustomerId = existingCustomer.stripeCustomerId;
+    } else {
+      // Create new Stripe customer (Stripe is authoritative)
+      const stripeCustomer = await stripe.customers.create({
+        email: args.email,
+        name: args.name,
+        metadata: { 
+          userId: args.userId, // Store the tokenIdentifier for reference
+          source: 't3-chat-app'
+        },
+      });
+      
+      // Store minimal mapping in Convex
+      await ctx.db.insert("stripeCustomers", {
+        userId: user._id, // Use the Convex user ID
+        stripeCustomerId: stripeCustomer.id,
+        email: args.email,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+      
+      stripeCustomerId = stripeCustomer.id;
+    }
     
     // Create checkout session
     const session = await stripe.checkout.sessions.create({
-      customer: result.stripeCustomerId,
+      customer: stripeCustomerId,
       payment_method_types: ['card'],
       line_items: [
         {
@@ -96,7 +132,7 @@ export const createCheckoutSession = mutation({
       cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/stripe-demo/pricing?canceled=true`,
       subscription_data: {
         metadata: {
-          userId: args.userId,
+          userId: args.userId, // Store the tokenIdentifier for webhook lookups
         },
       },
     });
@@ -222,7 +258,7 @@ export const syncStripeSubscription = mutation({
 
 // ✅ PERMANENT - Helper function to update user tier
 async function updateUserTier(
-  ctx: any, 
+  ctx: MutationCtx, 
   userId: string, 
   tier: "free" | "premium-level-1"
 ) {
@@ -238,7 +274,7 @@ async function updateUserTier(
 
 // ✅ PERMANENT - Helper function for webhook event logging
 async function logWebhookEvent(
-  ctx: any,
+  ctx: MutationCtx,
   stripeEventId: string,
   eventType: string,
   processed: boolean,
