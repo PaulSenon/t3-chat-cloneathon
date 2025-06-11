@@ -73,7 +73,7 @@ NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_your_publishable_key_here
 // Add to convex/schema.ts
 customers: defineTable({
   userId: v.id("users"),
-  stripeCustomerId: v.string(),
+  stripeCustomerId: v.string(), // todo remove maybe because not ACID
   email: v.string(),
   createdAt: v.number(),
   updatedAt: v.number(),
