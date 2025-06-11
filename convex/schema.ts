@@ -45,6 +45,18 @@ export const messagePartTypes = v.union(
 
 export const flexibleMetadata = v.record(v.string(), v.any());
 
+// ✅ PERMANENT - Stripe subscription statuses (exact from Stripe API)
+export const stripeSubscriptionStatuses = v.union(
+  v.literal("active"),
+  v.literal("canceled"), 
+  v.literal("incomplete"),
+  v.literal("incomplete_expired"),
+  v.literal("past_due"),
+  v.literal("trialing"),
+  v.literal("unpaid"),
+  v.literal("paused")
+);
+
 export default defineSchema({
   users: defineTable({
     // Clerk user ID (from getUserIdentity().subject)
@@ -120,6 +132,47 @@ export default defineSchema({
     .index("byUserId", ["userId"]) // Direct user ownership index
     .index("byThreadIdSequenceNumber", ["threadId", "sequenceNumber"])
     .index("byParentMessageId", ["parentMessageId"]),
+
+  // ✅ PERMANENT - Stripe customer mappings (minimal data for ACID compliance)
+  stripeCustomers: defineTable({
+    userId: v.id("users"),
+    stripeCustomerId: v.string(), // Stripe's customer ID (authoritative)
+    email: v.string(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("byUserId", ["userId"])
+    .index("byStripeCustomerId", ["stripeCustomerId"]),
+
+  // ✅ PERMANENT - Subscription state cache (minimal data to avoid split-brain)
+  subscriptions: defineTable({
+    userId: v.id("users"),
+    stripeSubscriptionId: v.string(), // Stripe's subscription ID (authoritative) 
+    stripeCustomerId: v.string(),     // FK to Stripe customer
+    status: stripeSubscriptionStatuses, // Stripe's exact status values
+    priceId: v.string(),              // Stripe's price ID
+    tier: subscriptionTiers,          // Computed from priceId for performance
+    currentPeriodEnd: v.number(),     // Unix timestamp for business logic
+    cancelAtPeriodEnd: v.boolean(),   // For UI warning messages
+    updatedAt: v.number(),
+  })
+    .index("byUserId", ["userId"])
+    .index("byStripeSubscriptionId", ["stripeSubscriptionId"])
+    .index("byStatus", ["status"])
+    .index("byTier", ["tier"]),
+
+  // ✅ PERMANENT - Webhook event log for reliability and debugging
+  stripeWebhookEvents: defineTable({
+    stripeEventId: v.string(),        // Stripe's event ID (idempotency)
+    eventType: v.string(),            // e.g. "customer.subscription.updated"
+    processed: v.boolean(),
+    processedAt: v.optional(v.number()),
+    error: v.optional(v.string()),
+    createdAt: v.number(),
+  })
+    .index("byStripeEventId", ["stripeEventId"])
+    .index("byProcessed", ["processed"])
+    .index("byEventType", ["eventType"]),
 
   // TODO: outside of MVP scope
   // workspaces: defineTable({
