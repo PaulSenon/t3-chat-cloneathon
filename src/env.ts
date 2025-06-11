@@ -17,6 +17,10 @@ export const env = createEnv({
     OPENAI_API_KEY: z.string(),
     ANTHROPIC_API_KEY: z.string(),
 
+    // Stripe Configuration
+    STRIPE_SECRET_KEY: z.string(),
+    STRIPE_WEBHOOK_SECRET: z.string(),
+
     // Next.js specific
     NODE_ENV: z
       .enum(["development", "test", "production"])
@@ -39,6 +43,9 @@ export const env = createEnv({
 
     // Convex
     NEXT_PUBLIC_CONVEX_URL: z.string(),
+
+    // Stripe Configuration
+    NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: z.string(),
   },
 
   /**
@@ -60,6 +67,11 @@ export const env = createEnv({
     // AI Providers
     OPENAI_API_KEY: process.env.OPENAI_API_KEY,
     ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
+
+    // Stripe Configuration
+    STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
+    STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
+    NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
 
     // Next.js specific
     NODE_ENV: process.env.NODE_ENV,

@@ -53,17 +53,19 @@ NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_your_publishable_key_here
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
-### 2. Schema Extension
+### 2. ACID-Compliant Schema Design
 
 **File to update**: `convex/schema.ts`
 
-**Add these table definitions**:
+**IMPROVED schema following industry standards and ACID principles**:
 
 ```typescript
 // Add to your existing schema export
-customers: defineTable({
+
+// Minimal customer mapping - only essential data
+stripeCustomers: defineTable({
   userId: v.id("users"),
-  stripeCustomerId: v.string(),
+  stripeCustomerId: v.string(), // Stripe's customer ID (authoritative)
   email: v.string(),
   createdAt: v.number(),
   updatedAt: v.number(),
@@ -71,32 +73,53 @@ customers: defineTable({
   .index("byUserId", ["userId"])
   .index("byStripeCustomerId", ["stripeCustomerId"]),
 
+// Subscription state cache - minimal data to avoid split-brain
 subscriptions: defineTable({
   userId: v.id("users"),
-  stripeSubscriptionId: v.string(),
-  stripeCustomerId: v.string(),
+  stripeSubscriptionId: v.string(), // Stripe's subscription ID (authoritative) 
+  stripeCustomerId: v.string(),     // FK to Stripe customer
   status: v.union(
     v.literal("active"),
-    v.literal("canceled"),
+    v.literal("canceled"), 
     v.literal("incomplete"),
     v.literal("incomplete_expired"),
     v.literal("past_due"),
     v.literal("trialing"),
-    v.literal("unpaid")
-  ),
-  priceId: v.string(),
-  tier: subscriptionTiers,
-  currentPeriodStart: v.number(),
-  currentPeriodEnd: v.number(),
-  cancelAtPeriodEnd: v.boolean(),
-  trialEnd: v.optional(v.number()),
-  createdAt: v.number(),
+    v.literal("unpaid"),
+    v.literal("paused")
+  ), // Stripe's exact status values
+  priceId: v.string(),              // Stripe's price ID
+  tier: subscriptionTiers,          // Computed from priceId for performance
+  currentPeriodEnd: v.number(),     // Unix timestamp for business logic
+  cancelAtPeriodEnd: v.boolean(),   // For UI warning messages
   updatedAt: v.number(),
 })
   .index("byUserId", ["userId"])
   .index("byStripeSubscriptionId", ["stripeSubscriptionId"])
-  .index("byStripeCustomerId", ["stripeCustomerId"]),
+  .index("byStatus", ["status"])
+  .index("byTier", ["tier"]),
+
+// Webhook event log for reliability and debugging
+stripeWebhookEvents: defineTable({
+  stripeEventId: v.string(),        // Stripe's event ID (idempotency)
+  eventType: v.string(),            // e.g. "customer.subscription.updated"
+  processed: v.boolean(),
+  processedAt: v.optional(v.number()),
+  error: v.optional(v.string()),
+  createdAt: v.number(),
+})
+  .index("byStripeEventId", ["stripeEventId"])
+  .index("byProcessed", ["processed"])
+  .index("byEventType", ["eventType"]),
 ```
+
+**Key ACID Compliance Improvements:**
+
+1. **Single Source of Truth**: Stripe is authoritative - we only cache essential state
+2. **No Data Duplication**: Removed redundant fields like `currentPeriodStart`, `trialEnd`
+3. **Proper Naming**: Using Stripe's exact field names and conventions
+4. **Idempotency**: Added webhook event tracking for reliable processing
+5. **Minimal State**: Only store what's needed for business logic and UI
 
 ### 3. Core Stripe Utilities
 
@@ -137,11 +160,11 @@ export function formatPrice(amount: number, currency: string = 'usd'): string {
 }
 ```
 
-### 4. Complete Convex Stripe Functions
+### 4. ACID-Compliant Convex Stripe Functions
 
 **Create file**: `convex/stripe.ts`
 
-**Production-ready Convex functions**:
+**Production-ready Convex functions following single source of truth pattern**:
 
 ```typescript
 import { v } from "convex/values";
@@ -149,7 +172,7 @@ import { mutation, query } from "./_generated/server";
 import { ConvexError } from "convex/values";
 import Stripe from 'stripe';
 
-// Initialize Stripe with environment variable
+// Initialize Stripe - environment variables handled by Convex
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2024-11-20.acacia',
 });
@@ -171,20 +194,20 @@ export const getOrCreateStripeCustomer = mutation({
     name: v.optional(v.string())
   },
   handler: async (ctx, args) => {
-    // Check if customer already exists
+    // Check if customer mapping already exists
     const existingCustomer = await ctx.db
-      .query("customers")
+      .query("stripeCustomers")
       .withIndex("byUserId", (q) => q.eq("userId", args.userId))
       .unique();
       
     if (existingCustomer) {
       return {
-        customerId: existingCustomer.stripeCustomerId,
+        stripeCustomerId: existingCustomer.stripeCustomerId,
         isNew: false
       };
     }
     
-    // Create new Stripe customer
+    // Create new Stripe customer (Stripe is authoritative)
     const stripeCustomer = await stripe.customers.create({
       email: args.email,
       name: args.name,
@@ -194,8 +217,8 @@ export const getOrCreateStripeCustomer = mutation({
       },
     });
     
-    // Store in Convex
-    await ctx.db.insert("customers", {
+    // Store minimal mapping in Convex
+    await ctx.db.insert("stripeCustomers", {
       userId: args.userId,
       stripeCustomerId: stripeCustomer.id,
       email: args.email,
@@ -204,7 +227,7 @@ export const getOrCreateStripeCustomer = mutation({
     });
     
     return {
-      customerId: stripeCustomer.id,
+      stripeCustomerId: stripeCustomer.id,
       isNew: true
     };
   },
@@ -227,7 +250,7 @@ export const createCheckoutSession = mutation({
     
     // Create checkout session
     const session = await stripe.checkout.sessions.create({
-      customer: result.customerId,
+      customer: result.stripeCustomerId,
       payment_method_types: ['card'],
       line_items: [
         {
@@ -252,89 +275,119 @@ export const createCheckoutSession = mutation({
   },
 });
 
+// ACID-compliant sync function - Stripe is the single source of truth
 export const syncStripeSubscription = mutation({
-  args: { stripeCustomerId: v.string() },
+  args: { 
+    stripeCustomerId: v.string(),
+    stripeEventId: v.optional(v.string()) // For idempotency
+  },
   handler: async (ctx, args) => {
+    // Idempotency check for webhook events
+    if (args.stripeEventId) {
+      const existingEvent = await ctx.db
+        .query("stripeWebhookEvents")
+        .withIndex("byStripeEventId", (q) => q.eq("stripeEventId", args.stripeEventId))
+        .unique();
+        
+      if (existingEvent?.processed) {
+        return { status: "already_processed" };
+      }
+    }
+
     try {
-      // Fetch latest subscription from Stripe
+      // Fetch current state from Stripe (single source of truth)
       const subscriptions = await stripe.subscriptions.list({
         customer: args.stripeCustomerId,
         limit: 1,
         status: "all",
-        expand: ["data.default_payment_method"],
       });
       
-      // Get user from customer mapping
+      // Get user mapping
       const customer = await ctx.db
-        .query("customers")
+        .query("stripeCustomers")
         .withIndex("byStripeCustomerId", (q) => q.eq("stripeCustomerId", args.stripeCustomerId))
         .unique();
         
       if (!customer) {
-        throw new ConvexError(`Customer not found for Stripe customer ID: ${args.stripeCustomerId}`);
+        throw new ConvexError(`Customer mapping not found: ${args.stripeCustomerId}`);
       }
       
+      const now = Date.now();
+      
       if (subscriptions.data.length === 0) {
-        // No active subscription - set to free tier
-        await updateUserTier(ctx, customer.userId, "free");
-        
-        // Remove any existing subscription records
+        // No active subscription - clean up local cache
         const existingSub = await ctx.db
           .query("subscriptions")
-          .withIndex("byStripeCustomerId", (q) => q.eq("stripeCustomerId", args.stripeCustomerId))
+          .withIndex("byUserId", (q) => q.eq("userId", customer.userId))
           .unique();
           
         if (existingSub) {
           await ctx.db.delete(existingSub._id);
         }
         
+        // Update user tier to free
+        await updateUserTier(ctx, customer.userId, "free");
+        
+        // Mark event as processed
+        if (args.stripeEventId) {
+          await logWebhookEvent(ctx, args.stripeEventId, "customer.subscription.deleted", true);
+        }
+        
         return { tier: "free", status: "no_subscription" };
       }
       
+      // Process the most recent subscription
       const subscription = subscriptions.data[0];
       const tier = mapPriceIdToTier(subscription.items.data[0].price.id);
       
-      // Prepare subscription data
+      // Prepare minimal subscription cache
       const subData = {
+        userId: customer.userId,
         stripeSubscriptionId: subscription.id,
         stripeCustomerId: args.stripeCustomerId,
-        userId: customer.userId,
         status: subscription.status as any,
         priceId: subscription.items.data[0].price.id,
         tier,
-        currentPeriodStart: subscription.current_period_start * 1000,
-        currentPeriodEnd: subscription.current_period_end * 1000,
+        currentPeriodEnd: subscription.current_period_end * 1000, // Convert to milliseconds
         cancelAtPeriodEnd: subscription.cancel_at_period_end,
-        trialEnd: subscription.trial_end ? subscription.trial_end * 1000 : undefined,
-        updatedAt: Date.now(),
+        updatedAt: now,
       };
       
-      // Update or create subscription record
+      // Upsert subscription cache
       const existingSub = await ctx.db
         .query("subscriptions")
-        .withIndex("byStripeCustomerId", (q) => q.eq("stripeCustomerId", args.stripeCustomerId))
+        .withIndex("byUserId", (q) => q.eq("userId", customer.userId))
         .unique();
         
       if (existingSub) {
         await ctx.db.patch(existingSub._id, subData);
       } else {
-        await ctx.db.insert("subscriptions", {
-          ...subData,
-          createdAt: Date.now(),
-        });
+        await ctx.db.insert("subscriptions", subData);
       }
       
       // Update user tier
       await updateUserTier(ctx, customer.userId, tier);
       
-      return subData;
-    } catch (error) {
+      // Mark event as processed
+      if (args.stripeEventId) {
+        await logWebhookEvent(ctx, args.stripeEventId, "customer.subscription.updated", true);
+      }
+      
+      return { tier, status: subscription.status };
+    } catch (error: any) {
       console.error('Error syncing subscription:', error);
+      
+      // Log failed event
+      if (args.stripeEventId) {
+        await logWebhookEvent(ctx, args.stripeEventId, "sync_error", false, error.message);
+      }
+      
       throw new ConvexError(`Failed to sync subscription: ${error.message}`);
     }
   },
 });
 
+// Helper function to update user tier
 async function updateUserTier(
   ctx: any, 
   userId: string, 
@@ -347,6 +400,35 @@ async function updateUserTier(
     
   if (user) {
     await ctx.db.patch(user._id, { tier });
+  }
+}
+
+// Helper function for webhook event logging
+async function logWebhookEvent(
+  ctx: any,
+  stripeEventId: string,
+  eventType: string,
+  processed: boolean,
+  error?: string
+) {
+  const existingEvent = await ctx.db
+    .query("stripeWebhookEvents")
+    .withIndex("byStripeEventId", (q) => q.eq("stripeEventId", stripeEventId))
+    .unique();
+    
+  const eventData = {
+    stripeEventId,
+    eventType,
+    processed,
+    processedAt: processed ? Date.now() : undefined,
+    error,
+    createdAt: Date.now(),
+  };
+  
+  if (existingEvent) {
+    await ctx.db.patch(existingEvent._id, eventData);
+  } else {
+    await ctx.db.insert("stripeWebhookEvents", eventData);
   }
 }
 
@@ -379,7 +461,7 @@ export const getStripeCustomer = query({
     if (!user) return null;
     
     return await ctx.db
-      .query("customers")
+      .query("stripeCustomers")
       .withIndex("byUserId", (q) => q.eq("userId", user._id))
       .unique();
   },
