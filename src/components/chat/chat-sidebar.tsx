@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { cn } from "@/lib/utils";
 import {
   Sidebar,
@@ -12,38 +12,31 @@ import {
 } from "@/components/ui/sidebar";
 import { UserProfileButton } from "../auth/user-avatar";
 import { Separator } from "../ui/separator";
-import { NewChatButton } from "./new-chat-button";
-import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
-import { useRouter, useParams } from "next/navigation";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MessageCircle } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
+import { useChatCache } from "@/providers/ChatCacheProvider";
+import { useStableCachedQuery } from "@/hooks/useStableCachedQuery";
 interface ThreadItem {
   title?: string;
+  uuid: string;
 }
 
 export function ChatSidebar() {
-  const { isAuthenticated } = useAuth();
-  const threads = useQuery(
-    api.chat.getUserThreads,
-    isAuthenticated
-      ? {
-          paginationOpts: {
-            numItems: 50,
-            cursor: null,
-          },
-        }
-      : "skip"
-  );
-  const router = useRouter();
-  const { id } = useParams();
-  const currentThreadId: string | undefined = id as string;
-  console.log("chat-sidebar currentThreadId", currentThreadId);
+  const { setCurrentThreadId, createNewThread, currentThreadId } =
+    useChatCache();
 
-  const handleThreadClick = (threadId: string) => {
-    console.log(`chat-sidebar 🔄 Switching to thread: ${threadId}`);
-    router.push(`/chat/${threadId}`);
+  // Get real threads from Convex (RLS automatically filters to current user)
+  const threadsResult = useStableCachedQuery(api.chat.getUserThreads, {
+    paginationOpts: { numItems: 50, cursor: null },
+  });
+
+  const handleThreadClick = (uuid: string) => {
+    setCurrentThreadId(uuid);
+  };
+
+  const handleNewChat = () => {
+    createNewThread();
   };
 
   return (
@@ -52,7 +45,12 @@ export function ChatSidebar() {
         <h1 className="text-xl font-medium flex-grow text-center">T3 Chat</h1>
         <Separator className="mt-2" />
         <div className="mt-3">
-          <NewChatButton />
+          <button
+            onClick={handleNewChat}
+            className="w-full px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
+          >
+            New Chat
+          </button>
         </div>
       </SidebarHeader>
 
@@ -63,12 +61,12 @@ export function ChatSidebar() {
           </SidebarGroupLabel>
 
           <div className="space-y-1 mt-2">
-            {threads === undefined ? (
+            {threadsResult === undefined ? (
               // Loading skeleton
               Array.from({ length: 6 }).map((_, i) => (
                 <ThreadItemSkeleton key={i} index={i} />
               ))
-            ) : threads.page.length === 0 ? (
+            ) : threadsResult.page.length === 0 ? (
               // Empty state
               <div className="text-center py-8 text-muted-foreground">
                 <MessageCircle size={32} className="mx-auto mb-2 opacity-50" />
@@ -77,8 +75,8 @@ export function ChatSidebar() {
               </div>
             ) : (
               // Thread list
-              threads.page.map((thread) => (
-                <ThreadItem
+              threadsResult.page.map((thread) => (
+                <ThreadItemMemo
                   key={thread._id}
                   thread={thread}
                   isActive={currentThreadId === thread.uuid}
@@ -96,6 +94,8 @@ export function ChatSidebar() {
     </Sidebar>
   );
 }
+
+const ThreadItemMemo = React.memo(ThreadItem);
 
 function ThreadItem({
   thread,
@@ -117,7 +117,7 @@ function ThreadItem({
     >
       <div className="flex-1 min-w-0">
         <div className="text-sm font-small truncate">
-          {thread.title ?? "no title"}
+          {thread.title ?? thread.uuid}
         </div>
       </div>
     </div>
