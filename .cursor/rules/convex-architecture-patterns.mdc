@@ -1,0 +1,224 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Convex Architecture Patterns
+
+## Architecture Philosophy
+
+This project uses a **layered security architecture** with high-level abstractions built on bulletproof foundations.
+
+## Layer 1: Security Foundation (RLS)
+
+**Foundation**: [rls.ts](mdc:convex/rls.ts) provides automatic user isolation and access control.
+
+```
+┌─────────────────────────────────────────┐
+│ Next.js API Routes                      │
+│ ↓                                       │
+│ Clerk Authentication + Convex Token     │
+│ ↓                                       │
+│ RLS Functions (queryWithRLS, etc.)     │ ← Security layer
+│ ↓                                       │
+│ Database (user-isolated data)           │ ← 100% secure
+└─────────────────────────────────────────┘
+```
+
+## Layer 2: Core Functions
+
+**Core Data Access**: [threads.ts](mdc:convex/threads.ts) and [messages.ts](mdc:convex/messages.ts) provide direct table operations.
+
+- Use for: Simple UI queries, basic CRUD operations
+- Security: All use `queryWithRLS`/`mutationWithRLS`
+- Pattern: One function per operation
+
+## Layer 3: High-Level Abstractions
+
+**Business Logic**: [chat.ts](mdc:convex/chat.ts) provides complex multi-table operations.
+
+- Use for: API routes, complex workflows, AI integration
+- Benefits: Atomic operations, AI SDK compatibility, schema compliance
+- Pattern: One function per business operation
+
+## Decision Framework
+
+### When to Use Each Layer
+
+```typescript
+// ✅ Layer 3 (chat.ts) - Complex operations, API routes
+api.chat.sendMessage           // Creates user + assistant message
+api.chat.getConversationHistory // AI SDK format for useChat
+api.chat.streamCompletion      // Handle streaming updates
+
+// ✅ Layer 2 (threads/messages.ts) - Simple UI, basic operations  
+api.threads.getUserThreads     // Sidebar thread list
+api.threads.deleteThread       // Simple deletion
+api.messages.getThreadMessages // Basic message loading
+
+// ❌ Layer 1 (direct DB) - Never use directly from client
+ctx.db.query("threads")        // Bypasses RLS - FORBIDDEN
+```
+
+## File Organization
+
+```
+convex/
+├── rls.ts              ← Security foundation (Layer 1)
+├── schema.ts           ← Database schema
+├── lib.ts              ← Utility functions
+├── threads.ts          ← Core thread operations (Layer 2)
+├── messages.ts         ← Core message operations (Layer 2)
+├── chat.ts             ← High-level chat operations (Layer 3)
+├── users.ts            ← User management (special case)
+└── test.ts             ← Development utilities
+```
+
+## Security Rules
+
+### NEVER Bypass RLS
+
+```typescript
+// ❌ FORBIDDEN - Bypasses all security
+import { query } from "./_generated/server";
+export const unsafeFunction = query({...});
+
+// ✅ REQUIRED - Automatic security
+import { queryWithRLS } from "./rls";
+export const safeFunction = queryWithRLS({...});
+```
+
+### NEVER Manual Ownership Checks
+
+```typescript
+// ❌ REDUNDANT - RLS already handles this
+const thread = await ctx.db.get(threadId);
+if (thread.userId !== user._id) {
+  throw new Error("Access denied");
+}
+
+// ✅ AUTOMATIC - RLS filters automatically
+const thread = await ctx.db.get(threadId);
+if (!thread) {
+  throw new Error("Thread not found"); // Already filtered by RLS
+}
+```
+
+## Schema Compliance
+
+### Required Fields
+
+All messages MUST include:
+- `messageId` - Client-generated unique identifier
+- `parts` - Array of content parts (text, tool calls, etc.)
+- `metadata` - Object with finishReason, extra fields
+
+```typescript
+// ✅ CORRECT message structure
+{
+  threadId,
+  userId: user._id,
+  messageId: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+  role: "user" | "assistant",
+  parts: [{
+    type: "text",
+    content: string,
+    metadata: {}
+  }],
+  metadata: {
+    finishReason: undefined,
+    extra: {}
+  }
+}
+```
+
+## AI SDK v4 Integration
+
+### Message Format
+
+Return messages in UIMessage format:
+
+```typescript
+// ✅ AI SDK compatible
+{
+  id: msg.messageId,           // NOT msg._id
+  role: "user" | "assistant",
+  content: string,
+  createdAt: Date,
+  toolInvocations: ToolInvocation[]
+}
+```
+
+### useChat Integration
+
+```typescript
+// ✅ Perfect integration
+const messages = useQuery(api.chat.getConversationHistory, { threadId });
+const { messages: chatMessages } = useChat({
+  api: "/api/chat",
+  initialMessages: messages || []
+});
+```
+
+## Error Handling Patterns
+
+### RLS Errors
+
+RLS automatically returns `null` for unauthorized access:
+
+```typescript
+const thread = await ctx.db.get(threadId);
+if (!thread) {
+  // Could be: doesn't exist, user doesn't own it, or deleted
+  throw new ConvexError("Thread not found");
+}
+```
+
+### Client Error Handling
+
+```typescript
+try {
+  const result = await fetchMutation(api.chat.sendMessage, args, { token });
+} catch (error) {
+  if (error.message.includes("Thread not found")) {
+    // Handle unauthorized access
+  }
+}
+```
+
+## Performance Patterns
+
+### Efficient Queries
+
+```typescript
+// ✅ Use indexes for performance
+.withIndex("byUserIdUpdatedAt", (q) => q.eq("userId", user._id))
+.order("desc")
+.take(50)
+
+// ✅ Limit results
+.take(limit || 100)
+```
+
+### Optimistic Updates
+
+```typescript
+// ✅ Client-side optimistic updates
+const optimisticMessage = {
+  id: `temp_${Date.now()}`,
+  role: "user",
+  content: input
+};
+```
+
+## Testing Strategy
+
+### RLS Verification
+
+```typescript
+// Test that functions only return user's data
+// Test that deleted records are filtered
+// Test that unauthorized access returns null
+```
+
+This architecture ensures **bulletproof security**, **clean abstractions**, and **AI SDK compatibility** while maintaining **high performance** and **developer productivity**.

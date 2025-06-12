@@ -80,9 +80,9 @@ export function createOptimisticMessage(
   role: "user" | "assistant" = "user"
 ): AIMessage {
   return {
-    id: `temp-${Date.now()}-${Math.random()}`,
+    id: `temp-${Date.now()}-${crypto.randomUUID()}`,
     role,
     content,
-    createdAt: new Date(),
+    // Don't include createdAt to avoid Convex date type issues
   };
 }

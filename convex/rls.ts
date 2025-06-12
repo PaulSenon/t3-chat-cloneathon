@@ -81,25 +81,6 @@ async function rlsRules(ctx: QueryCtx) {
         return true;
       },
     },
-
-    // Messages table: users can only access messages in their own threads
-    messages: {
-      read: async (_, messageDoc) => {
-        if (!user) return false;
-        if (messageDoc.userId !== user._id) return false;
-        return true;
-      },
-      insert: async (_, messageDoc) => {
-        if (!user) return false;
-        if (messageDoc.userId !== user._id) return false;
-        return true;
-      },
-      modify: async (_, messageDoc) => {
-        if (!user) return false;
-        if (messageDoc.userId !== user._id) return false;
-        return true;
-      },
-    },
   } satisfies Rules<QueryCtx, DataModel>;
 }
 

@@ -33,14 +33,22 @@ export const aiMessageRoles = v.union(
   v.literal("tool")
 );
 
+// AI SDK v4 compatible message part types
 export const messagePartTypes = v.union(
   v.literal("text"),
+  v.literal("image"),
   v.literal("file"),
   v.literal("tool-call"),
   v.literal("tool-result"),
   v.literal("reasoning"), // for reasoning models
   v.literal("source"), // for source citations
   v.literal("data") // for custom data parts
+);
+
+// AI SDK v4 tool invocation states
+export const toolInvocationStates = v.union(
+  v.literal("call"),
+  v.literal("result")
 );
 
 export const flexibleMetadata = v.record(v.string(), v.any());
@@ -71,55 +79,30 @@ export default defineSchema({
 
   threads: defineTable({
     userId: v.id("users"),
-    // parentThreadId: v.optional(v.id("threads")), // for forking/branching (outside of MVP scope)
-    // workspaceId: v.optional(v.id("workspaces")), // for future workspace feature (outside of MVP scope)
+    uuid: v.string(),
     title: v.optional(v.string()),
     status: threadLifecycleStatuses,
     createdAt: v.number(),
     updatedAt: v.number(),
+    messages: v.any(),
+
+    // AI SDK v4: Enhanced metadata for thread management
     metadata: v.optional(
       v.object({
         lastUsedModel: aiModels,
         lastUsedProvider: aiModelProviders,
+        messageCount: v.optional(v.number()),
+        totalTokens: v.optional(v.number()),
+        lastMessagePreview: v.optional(v.string()), // For sidebar display
       })
     ),
   })
     .index("byUserId", ["userId"])
     // .index("byParentThreadId", ["parentThreadId"]) // for forking/branching (outside of MVP scope)
     // .index("byWorkspaceId", ["workspaceId"]) // for future workspace feature (outside of MVP scope)
-    .index("byUserIdUpdatedAt", ["userId", "updatedAt"]),
+    .index("byUserIdUpdatedAt", ["userId", "updatedAt"])
+    .index("byUuid", ["uuid"]),
   // .index("byWorkspaceIdUpdatedAt", ["workspaceId", "updatedAt"]) // for future workspace feature (outside of MVP scope)
-
-  messages: defineTable({
-    threadId: v.id("threads"),
-    userId: v.id("users"), // Direct ownership for efficient RLS
-    role: aiMessageRoles,
-    parts: v.array(
-      v.object({
-        type: messagePartTypes,
-        // Content is flexible to handle different part types
-        content: v.any(),
-        // Optional metadata for each part
-        metadata: v.optional(flexibleMetadata),
-      })
-    ),
-    sequenceNumber: v.number(),
-    parentMessageId: v.optional(v.id("messages")),
-    provider: v.optional(aiModelProviders),
-    model: v.optional(aiModels),
-    usage: v.object({
-      tokenCount: v.number(),
-      toolCallCount: v.number(),
-    }),
-    status: messageLifecycleStatuses,
-    createdAt: v.number(),
-    updatedAt: v.number(),
-    metadata: v.optional(flexibleMetadata),
-  })
-    .index("byThreadId", ["threadId"])
-    .index("byUserId", ["userId"]) // Direct user ownership index
-    .index("byThreadIdSequenceNumber", ["threadId", "sequenceNumber"])
-    .index("byParentMessageId", ["parentMessageId"]),
 
   // TODO: outside of MVP scope
   // workspaces: defineTable({

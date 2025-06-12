@@ -1,0 +1,92 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Convex RLS Architecture Rules
+
+## CRITICAL: Always Use RLS Functions
+
+**NEVER use regular `query` or `mutation` functions for client-facing operations.**
+
+All client-initiated Convex functions MUST use the RLS (Row Level Security) system:
+
+```typescript
+// ✅ CORRECT - Use RLS functions
+import { queryWithRLS, mutationWithRLS } from "./rls";
+
+export const getUserData = queryWithRLS({
+  handler: async (ctx, args) => {
+    // RLS automatically filters to current user's data
+    // No manual ownership checks needed!
+  }
+});
+```
+
+```typescript
+// ❌ WRONG - Never use regular functions for client operations
+import { query, mutation } from "./_generated/server";
+
+export const getUserData = query({
+  handler: async (ctx, args) => {
+    // This bypasses security - NEVER DO THIS
+  }
+});
+```
+
+## RLS System Benefits
+
+The RLS system in [rls.ts](mdc:convex/rls.ts) automatically provides:
+
+- **User Ownership Filtering**: Only returns data owned by the current user
+- **Deleted Record Filtering**: Automatically excludes soft-deleted records  
+- **Access Control**: Centralized security rules in one place
+- **Bulletproof Security**: Impossible to accidentally access other users' data
+
+## Files Using RLS Functions
+
+All these files correctly use RLS functions:
+
+- [threads.ts](mdc:convex/threads.ts) - All 8 functions use `mutationWithRLS`/`queryWithRLS`
+- [messages.ts](mdc:convex/messages.ts) - All 4 functions use `mutationWithRLS`/`queryWithRLS`  
+- [chat.ts](mdc:convex/chat.ts) - All 4 functions use `mutationWithRLS`/`queryWithRLS`
+
+## Exceptions (When NOT to use RLS)
+
+Only these specific cases should use regular `query`/`mutation`:
+
+1. **User Creation**: [users.ts](mdc:convex/users.ts) `ensureUserExists` - Creates new users
+2. **Internal Mutations**: Functions marked `internalMutation` - Server-side only
+3. **Auth Testing**: [test.ts](mdc:convex/test.ts) - Simple auth verification without database access
+
+## Pattern to Follow
+
+```typescript
+// 1. Import RLS functions
+import { queryWithRLS, mutationWithRLS } from "./rls";
+import { INTERNAL_getCurrentUserOrThrow } from "./lib";
+
+// 2. Use RLS functions for all exports
+export const myFunction = queryWithRLS({
+  handler: async (ctx, args) => {
+    // 3. Get user only when needed for business logic
+    const user = await INTERNAL_getCurrentUserOrThrow(ctx);
+    
+    // 4. No manual ownership checks - RLS handles this
+    const data = await ctx.db.get(args.id);
+    if (!data) {
+      throw new Error("Not found"); // RLS already filtered by user
+    }
+    
+    return data;
+  }
+});
+```
+
+## Security Guarantee
+
+With proper RLS usage:
+- **Users can ONLY access their own data**
+- **Deleted records are automatically filtered out**
+- **No risk of data leakage between users**
+- **Centralized security rules in [rls.ts](mdc:convex/rls.ts)**

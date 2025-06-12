@@ -1,0 +1,147 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Chat Abstraction Layer Rules
+
+## Prefer High-Level chat.ts Functions
+
+The [chat.ts](mdc:convex/chat.ts) file provides high-level abstractions for chat operations. **Always prefer these functions over direct calls to [threads.ts](mdc:convex/threads.ts) or [messages.ts](mdc:convex/messages.ts).**
+
+## High-Level Functions (Preferred)
+
+### For API Routes and Complex Operations
+
+Use [chat.ts](mdc:convex/chat.ts) functions for:
+
+```typescript
+// ✅ PREFERRED - Single call creates user + assistant message
+import { api } from "../../../../convex/_generated/api";
+
+const { threadId, userMessage, assistantMessage } = await fetchMutation(
+  api.chat.sendMessage,
+  { 
+    threadId, 
+    content: userInput, 
+    model: "gpt-4o-mini",
+    provider: "openai"
+  },
+  { token }
+);
+
+// ✅ PREFERRED - Get AI SDK compatible format
+const messages = await fetchQuery(
+  api.chat.getConversationHistory,
+  { threadId },
+  { token }
+);
+
+// ✅ PREFERRED - Handle streaming updates
+await fetchMutation(
+  api.chat.streamCompletion,
+  { messageId, textDelta: "new text" },
+  { token }
+);
+
+// ✅ PREFERRED - Complete streaming with usage stats
+await fetchMutation(
+  api.chat.completeStreaming,
+  { 
+    messageId,
+    usage: { tokenCount: 150, toolCallCount: 0 }
+  },
+  { token }
+);
+```
+
+## chat.ts Functions Overview
+
+| Function | Purpose | Returns |
+|----------|---------|---------|
+| `sendMessage` | Creates user message + assistant shell | `{ threadId, userMessage, assistantMessage }` |
+| `getConversationHistory` | Gets messages in AI SDK format | `UIMessage[]` format |
+| `streamCompletion` | Updates streaming message | Updated message |
+| `completeStreaming` | Finalizes message with usage | Completed message |
+
+## When to Use Lower-Level Functions
+
+Only use [threads.ts](mdc:convex/threads.ts) and [messages.ts](mdc:convex/messages.ts) directly for:
+
+### UI Components (Simple Queries)
+
+```typescript
+// ✅ OK for simple UI data
+const threads = useQuery(api.threads.getUserThreads, { limit: 50 });
+const thread = useQuery(api.threads.getThread, { threadId });
+```
+
+### Basic CRUD Operations
+
+```typescript
+// ✅ OK for simple operations
+await fetchMutation(api.threads.updateThreadTitle, { threadId, title });
+await fetchMutation(api.threads.deleteThread, { threadId });
+```
+
+## Schema Compliance Requirements
+
+All message creation MUST include `messageId`:
+
+```typescript
+// ✅ CORRECT - messageId required
+await ctx.db.insert("messages", {
+  threadId,
+  userId: user._id,
+  messageId: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+  role: "user",
+  parts: [{
+    type: "text",
+    content: text,
+    metadata: {}
+  }],
+  // ... other required fields
+});
+```
+
+## AI SDK v4 Compatibility
+
+[chat.ts](mdc:convex/chat.ts) functions return data in AI SDK v4 format:
+
+```typescript
+// UIMessage format from getConversationHistory
+{
+  id: msg.messageId,        // Use messageId, not _id
+  role: "user" | "assistant",
+  content: string,
+  createdAt: Date,
+  toolInvocations: ToolInvocation[]
+}
+```
+
+## Architecture Benefits
+
+Using [chat.ts](mdc:convex/chat.ts) provides:
+
+- **Atomic Operations**: Single call for complex multi-table operations
+- **AI SDK Ready**: Perfect format for `useChat` hook
+- **Tool Support**: Ready for custom components and widgets
+- **Schema Compliant**: Proper `messageId` generation
+- **RLS Secured**: All functions use `mutationWithRLS`/`queryWithRLS`
+
+## Migration Pattern
+
+When updating API routes:
+
+```typescript
+// ❌ OLD - Multiple low-level calls
+const thread = await fetchMutation(api.threads.createThread, {...});
+const userMsg = await fetchMutation(api.messages.createMessage, {...});
+const assistantMsg = await fetchMutation(api.messages.createMessage, {...});
+
+// ✅ NEW - Single high-level call
+const { threadId, userMessage, assistantMessage } = await fetchMutation(
+  api.chat.sendMessage,
+  { threadId, content, model: "gpt-4o-mini" }
+);
+```
