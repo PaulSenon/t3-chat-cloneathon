@@ -11,7 +11,11 @@ import {
   PaginatedQueryReference,
   useQuery,
 } from "convex/react";
-import type { UsePaginatedQueryResult, PaginatedQueryItem } from "convex/react";
+import type {
+  UsePaginatedQueryResult,
+  PaginatedQueryItem,
+  UsePaginatedQueryReturnType,
+} from "convex/react";
 import { useEffect, useRef, useState } from "react";
 import { useLocalCache } from "@/providers/LocalCacheProvider";
 import { useHotCachedPaginatedQuery } from "./useHotCachedQuery";
@@ -30,9 +34,8 @@ export function useColdCachedPaginatedQuery<
   isStale: boolean;
 } {
   // NB. for staleResults, undefined means "not loaded yet" and null means "no data", empty array means "no results"
-  const [staleResults, setStaleResults] = useState<
-    PaginatedQueryItem<Query>[] | null | undefined
-  >(undefined);
+  const [stalePaginatedData, setStalePaginatedData] =
+    useState<UsePaginatedQueryReturnType<Query>>();
 
   const isSkip = args === "skip";
   const cacheKey = useRef<string>(
@@ -52,10 +55,9 @@ export function useColdCachedPaginatedQuery<
 
     const data = cache.get(cacheKey.current);
     console.log("data", data);
+    // todo: zod validation
     if (data !== undefined) {
-      setStaleResults(data as FunctionReturnType<Query>[] | null);
-    } else {
-      setStaleResults(null); // no data (explicitly)
+      setStalePaginatedData(data as UsePaginatedQueryReturnType<Query>);
     }
   }, [isSkip, cache]);
 
@@ -73,43 +75,21 @@ export function useColdCachedPaginatedQuery<
       return;
 
     // Save the current results array to cache
-    cache.set(cacheKey.current, remotePaginatedData.results);
-  }, [
-    remotePaginatedData.results,
-    cache,
-    isSkip,
-    remotePaginatedData.isLoading,
-  ]);
+    cache.set(cacheKey.current, remotePaginatedData);
+  }, [remotePaginatedData, cache, isSkip]);
 
-  // Return stale data if remote data is not available yet
-  const resultsToReturn =
-    remotePaginatedData.results.length > 0
-      ? remotePaginatedData.results
-      : staleResults || [];
-
-  if (remotePaginatedData.isLoading) {
-    // if no stale data or loading stale data, then act as if loading first page
-    if (staleResults === undefined || staleResults === null) {
-      return {
-        ...remotePaginatedData,
-        results: resultsToReturn,
-        status: "LoadingFirstPage",
-        isLoading: true,
-        isStale: false,
-      };
-    } else {
-      return {
-        ...remotePaginatedData,
-        results: resultsToReturn,
-        status: "Exhausted",
-        isLoading: false,
-        isStale: true,
-      };
-    }
+  if (remotePaginatedData.isLoading && stalePaginatedData !== undefined) {
+    return {
+      loadMore: remotePaginatedData.loadMore,
+      results: stalePaginatedData.results,
+      status: stalePaginatedData.status as "Exhausted" | "CanLoadMore",
+      isLoading: false,
+      isStale: true,
+    };
   }
+
   return {
     ...remotePaginatedData,
-    results: resultsToReturn,
     isStale: false,
   };
 }
