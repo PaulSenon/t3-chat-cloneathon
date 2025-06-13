@@ -1,13 +1,13 @@
 "use client";
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { Doc } from "../../convex/_generated/dataModel";
 import { useAuth } from "@/hooks/useAuth";
 import { api } from "../../convex/_generated/api";
 import { Message } from "@/types/chat";
 import superjson from "superjson";
-import { useStableCachedQuery } from "@/hooks/useStableCachedQuery";
 import { useParams } from "next/navigation";
 import { useQuery } from "convex-helpers/react/cache/hooks";
+import { useColdCachedQuery } from "@/hooks/useColdCachedQuery";
 
 type ParsedThread = Doc<"threads"> & {
   messages: Message[];
@@ -23,10 +23,16 @@ interface ChatCacheContextType {
 }
 
 function parseThread(thread: Doc<"threads">): ParsedThread {
-  return {
-    ...thread,
-    messages: superjson.parse(thread.messages),
-  };
+  try {
+    return {
+      ...thread,
+      messages: superjson.parse(thread.messages),
+    };
+  } catch (e) {
+    console.error("error parsing thread", e);
+    console.log("thread", thread);
+    throw e;
+  }
 }
 
 const ChatCacheContext = createContext<ChatCacheContextType | null>(null);
@@ -44,14 +50,15 @@ export function ChatCacheProvider({ children }: { children: React.ReactNode }) {
   const [currentThread, _setCurrentThread] = useState<ParsedThread | null>(
     null
   );
-  const currentThreadResult = useQuery(
-    api.chat.getChat,
-    isAuthenticated && currentThreadId
-      ? {
-          uuid: currentThreadId,
-        }
-      : "skip"
-  );
+  const { data: currentThreadResult, status: currentThreadStatus } =
+    useColdCachedQuery(
+      api.chat.getChat,
+      isAuthenticated && currentThreadId
+        ? {
+            uuid: currentThreadId,
+          }
+        : "skip"
+    );
 
   // thread hydration
   useEffect(() => {

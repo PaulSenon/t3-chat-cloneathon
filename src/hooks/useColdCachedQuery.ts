@@ -1,0 +1,212 @@
+"use client";
+
+import {
+  FunctionReference,
+  FunctionReturnType,
+  getFunctionName,
+} from "convex/server";
+import {
+  OptionalRestArgsOrSkip,
+  PaginatedQueryArgs,
+  PaginatedQueryReference,
+  useQuery,
+} from "convex/react";
+import type { UsePaginatedQueryResult, PaginatedQueryItem } from "convex/react";
+import { useEffect, useRef, useState } from "react";
+import { useLocalCache } from "@/providers/LocalCacheProvider";
+import { useHotCachedPaginatedQuery } from "./useHotCachedQuery";
+
+// TODO: cache all paginated result hook props, not just the result
+export function useColdCachedPaginatedQuery<
+  Query extends PaginatedQueryReference,
+>(
+  query: Query,
+  args: PaginatedQueryArgs<Query> | "skip",
+  options: {
+    initialNumItems: number;
+    latestPageSize?: "grow" | "fixed";
+  }
+): UsePaginatedQueryResult<PaginatedQueryItem<Query>> & {
+  isStale: boolean;
+} {
+  // NB. for staleResults, undefined means "not loaded yet" and null means "no data", empty array means "no results"
+  const [staleResults, setStaleResults] = useState<
+    PaginatedQueryItem<Query>[] | null | undefined
+  >(undefined);
+
+  const isSkip = args === "skip";
+  const cacheKey = useRef<string>(
+    hashCacheKey(getFunctionName(query), args, options)
+  );
+  const cache = useLocalCache();
+
+  // load remote paginated data
+  const remotePaginatedData = useHotCachedPaginatedQuery(query, args, options);
+
+  // load stale data from cache if available
+  useEffect(() => {
+    // don't load from cache if skip mode
+    if (isSkip) return;
+    // don't load from cache if cache not ready
+    if (!cache.isReady) return;
+
+    const data = cache.get(cacheKey.current);
+    console.log("data", data);
+    if (data !== undefined) {
+      setStaleResults(data as FunctionReturnType<Query>[] | null);
+    } else {
+      setStaleResults(null); // no data (explicitly)
+    }
+  }, [isSkip, cache]);
+
+  // save remote data to cache when results change
+  useEffect(() => {
+    // don't save to cache if skip mode
+    if (isSkip) return;
+    // don't save to cache if cache not ready
+    if (!cache.isReady) return;
+    // don't save to cache if remote data is still loading initially
+    if (
+      remotePaginatedData.results.length === 0 &&
+      remotePaginatedData.isLoading
+    )
+      return;
+
+    // Save the current results array to cache
+    cache.set(cacheKey.current, remotePaginatedData.results);
+  }, [
+    remotePaginatedData.results,
+    cache,
+    isSkip,
+    remotePaginatedData.isLoading,
+  ]);
+
+  // Return stale data if remote data is not available yet
+  const resultsToReturn =
+    remotePaginatedData.results.length > 0
+      ? remotePaginatedData.results
+      : staleResults || [];
+
+  if (remotePaginatedData.isLoading) {
+    // if no stale data or loading stale data, then act as if loading first page
+    if (staleResults === undefined || staleResults === null) {
+      return {
+        ...remotePaginatedData,
+        results: resultsToReturn,
+        status: "LoadingFirstPage",
+        isLoading: true,
+        isStale: false,
+      };
+    } else {
+      return {
+        ...remotePaginatedData,
+        results: resultsToReturn,
+        status: "Exhausted",
+        isLoading: false,
+        isStale: true,
+      };
+    }
+  }
+  return {
+    ...remotePaginatedData,
+    results: resultsToReturn,
+    isStale: false,
+  };
+}
+
+export function useColdCachedQuery<Query extends FunctionReference<"query">>(
+  query: Query,
+  ...queryArgs: OptionalRestArgsOrSkip<Query>
+): {
+  data: FunctionReturnType<Query> | undefined;
+  status: "initializing" | "stale" | "fresh";
+} {
+  // NB. for data, undefined means "not loaded yet" and null means "no data"
+  const [staleData, setStaleData] = useState<
+    FunctionReturnType<Query> | null | undefined
+  >(undefined);
+  const isSkip = queryArgs[0] === "skip";
+  const cacheKey = useRef<string>(
+    hashCacheKey(getFunctionName(query), queryArgs)
+  ); // TODO ask AI if better this or useMemo ???
+  const cache = useLocalCache();
+
+  // load remote data
+  const remoteData = useQuery(query, ...queryArgs);
+
+  // load stale data from cache if available
+  useEffect(() => {
+    // don't load from cache if skip mode
+    if (isSkip) return;
+    // don't load from cache if cache not ready
+    if (!cache.isReady) return;
+
+    const data = cache.get(cacheKey.current);
+    if (data !== undefined) {
+      setStaleData(data);
+    } else {
+      setStaleData(null); // no data (explicitly)
+    }
+  }, [isSkip, cache]);
+
+  // save remote data to cache
+  useEffect(() => {
+    // don't save to cache if skip mode
+    if (isSkip) return;
+    // don't save to cache if cache not ready
+    if (!cache.isReady) return;
+    // don't save to cache if remote data is still loading
+    if (remoteData === undefined) return;
+
+    cache.set(cacheKey.current, remoteData);
+  }, [remoteData, cache, isSkip]);
+
+  if (remoteData === undefined && staleData === undefined) {
+    return {
+      data: undefined,
+      status: "initializing",
+    };
+  } else if (remoteData === undefined) {
+    return {
+      data: staleData,
+      status: "stale",
+    };
+  } else {
+    return {
+      data: remoteData,
+      status: "fresh",
+    };
+  }
+}
+
+function hashCacheKey(...args: unknown[]): string {
+  const data = args
+    .map((arg) =>
+      typeof arg === "object" && arg !== null
+        ? JSON.stringify(arg, Object.keys(arg).sort())
+        : String(arg)
+    )
+    .join("|");
+
+  return xxhash64(data);
+}
+
+// Fastest option with excellent collision resistance
+function xxhash64(str: string, seed = 0): string {
+  // Simple 64-bit version (good enough for cache keys)
+  let h1 = seed + 0x9e3779b1;
+  let h2 = seed + 0x85ebca77;
+
+  for (let i = 0; i < str.length; i++) {
+    const c = str.charCodeAt(i);
+    h1 = Math.imul(h1 ^ c, 0x85ebca6b) ^ (h1 >>> 13);
+    h2 = Math.imul(h2 ^ c, 0xc2b2ae3d) ^ (h2 >>> 16);
+  }
+
+  // Combine to 64-bit-like result
+  const combined = (h1 + h2) * 0x9e3779b1;
+  return (
+    (combined >>> 0).toString(36) +
+    ((combined / 0x100000000) >>> 0).toString(36)
+  );
+}

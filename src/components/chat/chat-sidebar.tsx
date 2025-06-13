@@ -16,7 +16,7 @@ import { api } from "../../../convex/_generated/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MessageCircle } from "lucide-react";
 import { useChatCache } from "@/providers/ChatCacheProvider";
-import { useStableCachedQuery } from "@/hooks/useStableCachedQuery";
+import { useColdCachedPaginatedQuery } from "@/hooks/useColdCachedQuery";
 interface ThreadItem {
   title?: string;
   uuid: string;
@@ -27,9 +27,14 @@ export function ChatSidebar() {
     useChatCache();
 
   // Get real threads from Convex (RLS automatically filters to current user)
-  const threadsResult = useStableCachedQuery(api.chat.getUserThreads, {
-    paginationOpts: { numItems: 50, cursor: null },
-  });
+  const { isLoading, isStale, loadMore, results, status } =
+    useColdCachedPaginatedQuery(
+      api.chat.getUserThreads,
+      {},
+      {
+        initialNumItems: 50,
+      }
+    );
 
   const handleThreadClick = (uuid: string) => {
     setCurrentThreadId(uuid);
@@ -57,16 +62,16 @@ export function ChatSidebar() {
       <SidebarContent className="p-2">
         <SidebarGroup>
           <SidebarGroupLabel className="text-xs font-medium p-1 flex items-center gap-2">
-            Previous Threads
+            Previous Threads ({status})
           </SidebarGroupLabel>
 
           <div className="space-y-1 mt-2">
-            {threadsResult === undefined ? (
+            {isLoading ? (
               // Loading skeleton
               Array.from({ length: 6 }).map((_, i) => (
                 <ThreadItemSkeleton key={i} index={i} />
               ))
-            ) : threadsResult.page.length === 0 ? (
+            ) : results.length === 0 ? (
               // Empty state
               <div className="text-center py-8 text-muted-foreground">
                 <MessageCircle size={32} className="mx-auto mb-2 opacity-50" />
@@ -75,11 +80,12 @@ export function ChatSidebar() {
               </div>
             ) : (
               // Thread list
-              threadsResult.page.map((thread) => (
+              results.map((thread) => (
                 <ThreadItemMemo
                   key={thread._id}
                   thread={thread}
                   isActive={currentThreadId === thread.uuid}
+                  isStale={isStale}
                   onClick={() => handleThreadClick(thread.uuid)}
                 />
               ))
@@ -100,10 +106,12 @@ const ThreadItemMemo = React.memo(ThreadItem);
 function ThreadItem({
   thread,
   isActive,
+  isStale,
   onClick,
 }: {
   thread: ThreadItem;
   isActive: boolean;
+  isStale: boolean;
   onClick: () => void;
 }) {
   return (
@@ -111,7 +119,8 @@ function ThreadItem({
       className={cn(
         "flex items-center gap-2 py-2 px-4 rounded-lg cursor-pointer transition-colors",
         "hover:bg-accent",
-        isActive && "bg-accent"
+        isActive && "bg-accent",
+        isStale && "opacity-50"
       )}
       onClick={onClick}
     >
