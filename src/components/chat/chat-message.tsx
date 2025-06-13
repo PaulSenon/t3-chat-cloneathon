@@ -10,6 +10,7 @@ interface ChatMessageProps {
   message: Message;
   onRetry?: () => void;
   onEdit?: () => void;
+  isStale: boolean;
 }
 
 /**
@@ -19,6 +20,7 @@ export const ChatMessage = React.memo(function ChatMessage({
   message,
   onRetry,
   onEdit,
+  isStale,
 }: ChatMessageProps) {
   const [copied, setCopied] = useState(false);
   const isUser = message.role === "user";
@@ -56,7 +58,8 @@ export const ChatMessage = React.memo(function ChatMessage({
           "group relative inline-block max-w-[80%] break-words rounded-xl px-4 py-3 text-left",
           isUser
             ? "border border-secondary/50 bg-secondary/50"
-            : "bg-transparent"
+            : "bg-transparent",
+          isStale && "opacity-50"
         )}
       >
         <span className="sr-only">

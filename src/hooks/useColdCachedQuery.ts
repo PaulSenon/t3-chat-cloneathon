@@ -16,9 +16,14 @@ import type {
   PaginatedQueryItem,
   UsePaginatedQueryReturnType,
 } from "convex/react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocalCache } from "@/providers/LocalCacheProvider";
-import { useHotCachedPaginatedQuery } from "./useHotCachedQuery";
+import {
+  useHotCachedPaginatedQuery,
+  useHotCachedQuery,
+} from "./useHotCachedQuery";
+import { useAuth } from "./useAuth";
+import { convexToJson, type Value } from "convex/values";
 
 // TODO: cache all paginated result hook props, not just the result
 export function useColdCachedPaginatedQuery<
@@ -33,6 +38,7 @@ export function useColdCachedPaginatedQuery<
 ): UsePaginatedQueryResult<PaginatedQueryItem<Query>> & {
   isStale: boolean;
 } {
+  // TODO useAuth
   // NB. for staleResults, undefined means "not loaded yet" and null means "no data", empty array means "no results"
   const [stalePaginatedData, setStalePaginatedData] =
     useState<UsePaginatedQueryReturnType<Query>>();
@@ -103,21 +109,48 @@ export function useColdCachedQuery<Query extends FunctionReference<"query">>(
   query: Query,
   ...queryArgs: OptionalRestArgsOrSkip<Query>
 ): {
-  data: FunctionReturnType<Query> | undefined;
-  status: "initializing" | "stale" | "fresh";
+  data: Query["_returnType"] | undefined;
+  isStale: boolean;
 } {
+  const { isAuthenticated } = useAuth();
+
   // NB. for data, undefined means "not loaded yet" and null means "no data"
   const [staleData, setStaleData] = useState<
     FunctionReturnType<Query> | null | undefined
   >(undefined);
+
   const isSkip = queryArgs[0] === "skip";
-  const cacheKey = useRef<string>(
-    hashCacheKey(getFunctionName(query), queryArgs)
-  ); // TODO ask AI if better this or useMemo ???
+  const argsObject = isSkip ? {} : (queryArgs[0] ?? {});
+  const queryName = getFunctionName(query);
   const cache = useLocalCache();
 
+  // Current state tracking
+  const currentCacheKey = useRef<string>(
+    hashCacheKey(queryName, convexToJson(argsObject))
+  );
+  const [lastSeenArgs, setLastSeenArgs] = useState(() =>
+    JSON.stringify(convexToJson(argsObject as Value))
+  );
+
+  // Handle query changes synchronously in render (like convex-helpers)
+  const currentArgsString = JSON.stringify(convexToJson(argsObject as Value));
+  if (currentArgsString !== lastSeenArgs) {
+    // Query changed - reset state and update cache key
+    setStaleData(undefined);
+    currentCacheKey.current = hashCacheKey(queryName, convexToJson(argsObject));
+    setLastSeenArgs(currentArgsString);
+    console.log("Query changed, resetting cache", {
+      oldArgs: lastSeenArgs,
+      newArgs: currentArgsString,
+      newCacheKey: currentCacheKey.current,
+    });
+  }
+
   // load remote data
-  const remoteData = useQuery(query, ...queryArgs);
+  const remoteData = useHotCachedQuery(
+    query,
+    ...(isAuthenticated ? queryArgs : ["skip"])
+  );
 
   // load stale data from cache if available
   useEffect(() => {
@@ -126,7 +159,11 @@ export function useColdCachedQuery<Query extends FunctionReference<"query">>(
     // don't load from cache if cache not ready
     if (!cache.isReady) return;
 
-    const data = cache.get(cacheKey.current);
+    const data = cache.get(currentCacheKey.current);
+    console.log("get from cache", {
+      cacheKey: currentCacheKey.current,
+      data,
+    });
     if (data !== undefined) {
       setStaleData(data);
     } else {
@@ -141,25 +178,29 @@ export function useColdCachedQuery<Query extends FunctionReference<"query">>(
     // don't save to cache if cache not ready
     if (!cache.isReady) return;
     // don't save to cache if remote data is still loading
-    if (remoteData === undefined) return;
+    if (remoteData === undefined || remoteData === null) return;
 
-    cache.set(cacheKey.current, remoteData);
+    cache.set(currentCacheKey.current, remoteData);
+    console.log("set to cache", {
+      cacheKey: currentCacheKey.current,
+      data: remoteData,
+    });
   }, [remoteData, cache, isSkip]);
 
   if (remoteData === undefined && staleData === undefined) {
     return {
       data: undefined,
-      status: "initializing",
+      isStale: false,
     };
   } else if (remoteData === undefined) {
     return {
       data: staleData,
-      status: "stale",
+      isStale: true,
     };
   } else {
     return {
       data: remoteData,
-      status: "fresh",
+      isStale: false,
     };
   }
 }

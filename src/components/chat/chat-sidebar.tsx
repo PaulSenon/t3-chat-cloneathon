@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import { cn } from "@/lib/utils";
 import {
   Sidebar,
@@ -29,7 +29,7 @@ export function ChatSidebar() {
   // Get real threads from Convex (RLS automatically filters to current user)
   const { isLoading, isStale, loadMore, results, status } =
     useColdCachedPaginatedQuery(
-      api.chat.getUserThreads,
+      api.chat.getUserThreadsForListing,
       {},
       {
         initialNumItems: 50,

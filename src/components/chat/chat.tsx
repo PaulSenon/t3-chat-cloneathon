@@ -1,16 +1,41 @@
 "use client";
 
-import { useChat } from "@ai-sdk/react";
+import { Message, useChat } from "@ai-sdk/react";
 import TmpChatInput from "./tmp-chat-input";
 import { BotIcon } from "lucide-react";
 import { ChatMessage } from "./chat-message";
 import { useChatCache } from "@/providers/ChatCacheProvider";
+import { Preloaded } from "convex/react";
+import { api } from "../../../convex/_generated/api";
+import { useColdCachedQuery } from "@/hooks/useColdCachedQuery";
+import { useMemo } from "react";
+import { parseMessages } from "@/lib/parser";
+import { useHotCachedQuery } from "@/hooks/useHotCachedQuery";
 
-export default function Chat() {
-  const { currentThreadId, currentThread, isLoadingCurrentThread } =
-    useChatCache();
+interface ChatProps {
+  threadPromise: Preloaded<typeof api.chat.getChat> | null;
+}
 
-  const initialMessages = currentThread?.messages ?? [];
+export default function Chat({ threadPromise }: ChatProps) {
+  const { currentThreadId } = useChatCache();
+  // const test = usePreloadedQuery(threadPromise);
+
+  const { data: currentThread, isStale } = useColdCachedQuery(
+    // const isStale = false;
+    // const currentThread = useHotCachedQuery(
+    api.chat.getChat,
+    currentThreadId
+      ? {
+          uuid: currentThreadId,
+        }
+      : "skip"
+  );
+
+  const initialMessages: Message[] = useMemo(() => {
+    if (!currentThread) return [];
+    if (!currentThread.messages) return [];
+    return parseMessages(currentThread.messages);
+  }, [currentThread]);
 
   const { input, handleInputChange, handleSubmit, messages, reload } = useChat({
     api: "/api/chat",
@@ -38,7 +63,7 @@ export default function Chat() {
           {currentThreadId ?? "null"}
         </div>
 
-        {isLoadingCurrentThread ? (
+        {currentThread === undefined ? (
           <LoadingChatPlaceholder />
         ) : messages.length === 0 && !currentThreadId ? (
           <EmptyChatPlaceholder />
@@ -46,6 +71,7 @@ export default function Chat() {
           messages.map((message) => (
             <ChatMessage
               key={message.id}
+              isStale={isStale}
               message={{
                 id: message.id,
                 content: message.content,

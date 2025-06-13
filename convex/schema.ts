@@ -84,7 +84,7 @@ export default defineSchema({
     status: threadLifecycleStatuses,
     createdAt: v.number(),
     updatedAt: v.number(),
-    messages: v.any(),
+    messages: v.string(),
 
     // AI SDK v4: Enhanced metadata for thread management
     metadata: v.optional(

@@ -3,11 +3,13 @@ import { ConvexError, v } from "convex/values";
 import { queryWithRLS, mutationWithRLS } from "./rls";
 import { INTERNAL_getCurrentUserOrThrow } from "./lib";
 import { paginationOptsValidator } from "convex/server";
+import { Doc } from "./_generated/dataModel";
+import type { Message } from "ai";
 
 export const saveChat = mutationWithRLS({
   args: {
     uuid: v.string(),
-    messages: v.any(),
+    messages: v.string(),
   },
   handler: async (ctx, args) => {
     const thread = await ctx.db
@@ -27,7 +29,7 @@ export const saveChat = mutationWithRLS({
 export const createChat = mutationWithRLS({
   args: {
     uuid: v.string(),
-    messages: v.any(),
+    messages: v.string(),
   },
   handler: async (ctx, args) => {
     const user = await INTERNAL_getCurrentUserOrThrow(ctx);
@@ -56,26 +58,44 @@ export const getChat = queryWithRLS({
     uuid: v.string(),
   },
   handler: async (ctx, args) => {
-    const thread = await ctx.db
+    const rawThread = await ctx.db
       .query("threads")
       .withIndex("byUuid", (q) => q.eq("uuid", args.uuid))
       .unique();
-    if (!thread) {
+    if (!rawThread) {
       return null;
     }
 
-    return thread;
+    return rawThread;
   },
 });
 
-export const getUserThreads = queryWithRLS({
+type ThreadForListing = Omit<Doc<"threads">, "messages" | "metadata">;
+
+export const getUserThreadsForListing = queryWithRLS({
   args: {
     paginationOpts: paginationOptsValidator,
   },
   handler: async (ctx, args) => {
-    return await ctx.db
+    const paginatedThreads = await ctx.db
       .query("threads")
       .order("desc")
       .paginate(args.paginationOpts);
+
+    return {
+      ...paginatedThreads,
+      page: paginatedThreads.page.map(
+        (thread): ThreadForListing => ({
+          _id: thread._id,
+          _creationTime: thread._creationTime,
+          uuid: thread.uuid,
+          title: thread.title,
+          createdAt: thread.createdAt,
+          updatedAt: thread.updatedAt,
+          status: thread.status,
+          userId: thread.userId,
+        })
+      ),
+    };
   },
 });
