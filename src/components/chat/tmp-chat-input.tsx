@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Button } from "../ui/button";
 import { Textarea } from "../ui/textarea";
 import { SendIcon } from "lucide-react";
-import { useChatCache } from "@/providers/ChatCacheProvider";
+import { useChatState } from "@/providers/ChatStateProvider";
 import { useChat } from "@ai-sdk/react";
 
 export interface TmpChatInputProps {
@@ -21,7 +21,7 @@ export default function TmpChatInput({
   onChange,
   onSubmit,
 }: TmpChatInputProps) {
-  const { currentThreadId } = useChatCache();
+  const { currentThreadId } = useChatState();
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();

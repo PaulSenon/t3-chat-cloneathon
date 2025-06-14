@@ -1,27 +1,23 @@
 "use client";
 
-import { Message, useChat } from "@ai-sdk/react";
+import { useChat } from "@ai-sdk/react";
 import TmpChatInput from "./tmp-chat-input";
 import { BotIcon } from "lucide-react";
 import { ChatMessage } from "./chat-message";
-import { useChatCache } from "@/providers/ChatCacheProvider";
-import { Preloaded, useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useColdCachedQuery } from "@/hooks/useColdCachedQuery";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo } from "react";
 import { parseMessages } from "@/lib/parser";
-import { useHotCachedQuery } from "@/hooks/useHotCachedQuery";
-import { useParams } from "next/navigation";
+import { useChatState, useChatActions } from "@/providers/ChatStateProvider";
 
-interface ChatProps {
-  threadPromise: Preloaded<typeof api.chat.getChat> | null;
-}
+export default function Chat() {
+  const { currentThreadId } = useChatState();
+  const actions = useChatActions();
 
-export default function Chat({ threadPromise }: ChatProps) {
-  const { id } = useParams();
-  const { currentThreadId, createNewThread } = useChatCache();
-
+  // fetch the current thread (only if we have an id (not on /chat))
   const { data: currentThread, isStale } = useColdCachedQuery(
+    // const isStale = false;
+    // const currentThread = useQuery(
     // const isStale = false;
     // const currentThread = useHotCachedQuery(
     api.chat.getChat,
@@ -30,32 +26,32 @@ export default function Chat({ threadPromise }: ChatProps) {
           uuid: currentThreadId,
         }
       : "skip"
-  );
+  ); // undefined = loading, null = no thread
+  const isLoading = currentThreadId && currentThread === undefined;
 
-  // const isStale = false;
-  // const currentThread = useQuery(
-  //   // const isStale = false;
-  //   // const currentThread = useHotCachedQuery(
-  //   api.chat.getChat,
-  //   currentThreadId
-  //     ? {
-  //         uuid: currentThreadId,
-  //       }
-  //     : "skip"
-  // );
-
-  const initialMessages: Message[] = useMemo(() => {
-    if (!currentThread) return [];
-    if (!currentThread.messages) return [];
-
-    return parseMessages(currentThread.messages);
+  // we need to parse the messages if we received a thread
+  const initialMessages = useMemo(() => {
+    try {
+      if (!currentThread) return undefined;
+      if (!currentThread.messages) return undefined;
+      return parseMessages(currentThread.messages);
+    } catch (e) {
+      console.error("error parsing messages !!!", e);
+      return undefined;
+    }
   }, [currentThread]);
 
-  const { input, handleInputChange, handleSubmit, messages } = useChat({
+  // we create the useChat instance but in case of no thread id it's simply not used
+  const {
+    input,
+    handleInputChange: chatHandleInputChange,
+    handleSubmit: chatHandleSubmit,
+    messages,
+    id: chatId,
+  } = useChat({
     api: "/api/chat",
     id: currentThreadId, // use the provided chat ID
     initialMessages, // initial messages if provided
-
     sendExtraMessageFields: true, // send id and createdAt for each message
     // only send the last message to the server:
     experimental_prepareRequestBody({ messages, id }) {
@@ -77,12 +73,35 @@ export default function Chat({ threadPromise }: ChatProps) {
     },
   });
 
-  const _handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    if (!id) {
-      createNewThread();
-    }
+  const isNewThread = currentThreadId === undefined;
+
+  useEffect(() => {
+    console.log("chat debug", {
+      currentThreadId,
+      initialMessages,
+      currentThread,
+      chatId,
+      isLoading,
+      isNewThread,
+    });
+  }, [
+    currentThreadId,
+    chatId,
+    isLoading,
+    isNewThread,
+    initialMessages,
+    currentThread,
+  ]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    actions.handleInputChange(chatId); // TODO: perhaps saving the input in case of page reload to restore it. We should keep one cached input state per chat id. and perhaps one shared when we are on /chat (because id not persisted yet)
+    chatHandleInputChange(e); // update the chat
+  };
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    handleSubmit(e);
+    actions.handleSubmit(chatId); // TODO: if was on /chat, we shallow redirect to /chat/chatId, and set the currentThreadId to chatId. If was on /chat/id, we will do nothing.
+    chatHandleSubmit(e);
   };
 
   // simplified rendering code, extend as needed:
@@ -91,13 +110,14 @@ export default function Chat({ threadPromise }: ChatProps) {
       <div className="max-w-3xl mx-auto space-y-5 p-4">
         <div className="aria-hidden h-10"></div>
         <div className="text-sm text-muted-foreground">
-          {currentThreadId ?? "null"} {messages.length} {initialMessages.length}
+          {currentThreadId ?? "null"} {messages.length}{" "}
+          {initialMessages?.length}
         </div>
 
-        {currentThread === undefined ? (
+        {isLoading ? (
           <LoadingChatPlaceholder />
-        ) : messages.length === 0 && !currentThreadId ? (
-          <EmptyChatPlaceholder />
+        ) : isNewThread ? (
+          <NewChatPlaceholder />
         ) : (
           messages.map((message) => (
             <ChatMessage
@@ -125,7 +145,7 @@ export default function Chat({ threadPromise }: ChatProps) {
   );
 }
 
-const EmptyChatPlaceholder = () => {
+const NewChatPlaceholder = () => {
   return (
     <div className="flex flex-col items-center justify-center py-12 text-center">
       <BotIcon className="h-12 w-12 text-muted-foreground mb-4" />

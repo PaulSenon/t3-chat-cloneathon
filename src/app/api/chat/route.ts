@@ -30,6 +30,7 @@ export async function POST(req: Request) {
 
   // load the previous messages from the server or create a new thread:
   const thread =
+    // TODO create a appendNewMessages to add the user one asap
     (await fetchQuery(api.chat.getChat, { uuid: id }, { token })) ??
     (await fetchMutation(
       api.chat.createChat,

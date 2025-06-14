@@ -15,7 +15,7 @@ import { Separator } from "../ui/separator";
 import { api } from "../../../convex/_generated/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MessageCircle } from "lucide-react";
-import { useChatCache } from "@/providers/ChatCacheProvider";
+import { useChatActions, useChatState } from "@/providers/ChatStateProvider";
 import { useColdCachedPaginatedQuery } from "@/hooks/useColdCachedQuery";
 interface ThreadItem {
   title?: string;
@@ -23,8 +23,8 @@ interface ThreadItem {
 }
 
 export function ChatSidebar() {
-  const { setCurrentThreadId, createNewThread, currentThreadId } =
-    useChatCache();
+  const { currentThreadId } = useChatState();
+  const actions = useChatActions();
 
   // Get real threads from Convex (RLS automatically filters to current user)
   const { isLoading, isStale, loadMore, results, status } =
@@ -37,11 +37,11 @@ export function ChatSidebar() {
     );
 
   const handleThreadClick = (uuid: string) => {
-    setCurrentThreadId(uuid);
+    actions.openChat(uuid);
   };
 
   const handleNewChat = () => {
-    createNewThread();
+    actions.openNewChat();
   };
 
   return (

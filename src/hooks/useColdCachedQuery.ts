@@ -173,6 +173,13 @@ export function useColdCachedQuery<Query extends FunctionReference<"query">>(
     }
   }, [isSkip, cacheKey, remoteData, setCache, deleteCache]);
 
+  if (isSkip) {
+    return {
+      data: undefined,
+      isStale: false,
+    };
+  }
+
   if (remoteData === undefined && staleData === undefined) {
     return {
       data: undefined,

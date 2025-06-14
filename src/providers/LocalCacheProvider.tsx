@@ -28,10 +28,16 @@ function saveToLocalStorage(data: [string, object][]) {
   }
 }
 
+function clearLocalStorage() {
+  console.log("clearing local cache");
+  window.localStorage.removeItem("app-cache");
+}
+
 interface LocalCacheContextType {
   get: (key: string) => object | undefined;
   set: (key: string, value: object) => void;
   delete: (key: string) => void;
+  clear: () => void;
   isReady: boolean;
 }
 
@@ -71,6 +77,11 @@ export function LocalCacheProvider({
     saveToLocalStorage(Array.from(cacheRef.current.entries()));
   };
 
+  const clear = () => {
+    cacheRef.current.clear();
+    clearLocalStorage();
+  };
+
   // const map = useMemo(() => new Map<string, object>(), []);
   // useEffect(() => {
   //   try {
@@ -101,7 +112,7 @@ export function LocalCacheProvider({
 
   return (
     <LocalCacheContext.Provider
-      value={{ get, set, delete: del, isReady: ready }}
+      value={{ get, set, delete: del, clear, isReady: ready }}
     >
       {children}
     </LocalCacheContext.Provider>

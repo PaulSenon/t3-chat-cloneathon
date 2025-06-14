@@ -1,6 +1,6 @@
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { ChatSidebar } from "@/components/chat/chat-sidebar";
-import { ChatCacheProvider } from "@/providers/ChatCacheProvider";
+import { ChatStateProvider } from "@/providers/ChatStateProvider";
 import { LocalCacheProvider } from "@/providers/LocalCacheProvider";
 
 export default function ChatLayout({
@@ -10,7 +10,7 @@ export default function ChatLayout({
 }) {
   return (
     <LocalCacheProvider>
-      <ChatCacheProvider>
+      <ChatStateProvider>
         <SidebarProvider>
           <ChatSidebar />
           <main className="relative w-full">
@@ -18,7 +18,7 @@ export default function ChatLayout({
             {children}
           </main>
         </SidebarProvider>
-      </ChatCacheProvider>
+      </ChatStateProvider>
     </LocalCacheProvider>
   );
 }

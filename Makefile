@@ -48,6 +48,13 @@ create-env-files: ## Create required environment files
 		echo "# LOCAL SECRETS - NEVER COMMIT" > .env.local; \
 	fi
 
+pnpm-build: ## Build production image
+	$(call run_in_container_smart,app,pnpm run build)
+
+pnpm-start: ## Start production image
+		$(call run_in_container_smart,app,bash -c "pnpm dlx convex dev & pnpm start")
+
+
 # CONVEX COMMANDS
 convex-login: ## Login to Convex cloud
 	$(call run_in_container_smart,convex,pnpm dlx convex login)
