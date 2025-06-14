@@ -26,9 +26,9 @@ export async function POST(req: Request) {
   // get the last message from the client:
   const body = await req.json();
   const { message, id } = body;
-  console.log("🔍 Received body:", JSON.stringify(body, null, 2));
+  console.log("🔍 Received message:", message.id);
 
-  // load the previous messages from the server:
+  // load the previous messages from the server or create a new thread:
   const thread =
     (await fetchQuery(api.chat.getChat, { uuid: id }, { token })) ??
     (await fetchMutation(
@@ -44,13 +44,33 @@ export async function POST(req: Request) {
     throw new Error("Failed to create or get thread");
   }
 
+  const pastMessages: Message[] = thread.messages
+    ? superjson.parse(thread.messages)
+    : [];
+  console.log(
+    "🔍 fetched past thread messages:",
+    JSON.stringify(
+      pastMessages.map((m) => m.id),
+      null,
+      2
+    )
+  );
+
   // append the new message to the previous messages:
   const messages = appendClientMessage({
-    messages: thread.messages ? superjson.parse(thread.messages) : [],
+    messages: pastMessages,
     message,
   });
 
-  console.log("🔍 Messages:", JSON.stringify(messages, null, 2));
+  console.log(
+    "🔍 new list of messages:",
+    JSON.stringify(
+      messages.map((m) => m.id),
+      null,
+      2
+    )
+  );
+
   const result = streamText({
     model: openai("gpt-4o-mini"),
     messages,

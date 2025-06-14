@@ -9,7 +9,6 @@ import {
   OptionalRestArgsOrSkip,
   PaginatedQueryArgs,
   PaginatedQueryReference,
-  useQuery,
 } from "convex/react";
 import type {
   UsePaginatedQueryResult,
@@ -113,6 +112,98 @@ export function useColdCachedQuery<Query extends FunctionReference<"query">>(
   isStale: boolean;
 } {
   const { isAuthenticated } = useAuth();
+  const {
+    isReady: isCacheReady,
+    get: getCache,
+    set: setCache,
+    delete: deleteCache,
+  } = useLocalCache();
+  const isSkip = queryArgs[0] === "skip" || !isCacheReady;
+  const queryNameString = getFunctionName(query);
+  const queryArgsString = JSON.stringify(queryArgs);
+  const cacheKey = useMemo(() => {
+    if (isSkip) return null;
+    const key = hashCacheKey(queryNameString, queryArgsString);
+    return key;
+  }, [queryNameString, queryArgsString, isSkip]);
+  const prevCacheKey = useRef<string | null>(null);
+
+  // const staleDataRef = useRef<Query["_returnType"] | undefined>(undefined);
+  const [staleData, setStaleData] = useState<
+    Query["_returnType"] | undefined
+  >();
+
+  const remoteData = useHotCachedQuery(
+    query,
+    ...(isAuthenticated ? queryArgs : ["skip"])
+  );
+
+  // load stale data from cache if available
+  useEffect(() => {
+    if (isSkip) return;
+    if (prevCacheKey.current !== cacheKey && cacheKey !== null) {
+      prevCacheKey.current = cacheKey;
+      const data = getCache(cacheKey);
+      console.log("DEBUG: get from cache", {
+        cacheKey,
+        data,
+      });
+      // staleDataRef.current = data;
+      setStaleData(data);
+    }
+  }, [isSkip, cacheKey, getCache]);
+
+  // persist remote data to cache when results change
+  useEffect(() => {
+    if (isSkip) return;
+    if (cacheKey === null) return;
+    if (remoteData === undefined) return; // don't store while loading
+
+    if (remoteData === null) {
+      console.log("DEBUG: delete from cache", {
+        cacheKey,
+      });
+      deleteCache(cacheKey);
+    } else {
+      console.log("DEBUG: set to cache", {
+        cacheKey,
+        data: remoteData,
+      });
+      setCache(cacheKey, remoteData);
+    }
+  }, [isSkip, cacheKey, remoteData, setCache, deleteCache]);
+
+  if (remoteData === undefined && staleData === undefined) {
+    return {
+      data: undefined,
+      isStale: false,
+    };
+  } else if (remoteData === undefined) {
+    return {
+      data: staleData,
+      isStale: true,
+    };
+  } else {
+    return {
+      data: remoteData,
+      isStale: false,
+    };
+  }
+}
+
+/**
+ * @deprecated use useColdCachedQuery instead
+ */
+export function useColdCachedQueryDeprecated<
+  Query extends FunctionReference<"query">,
+>(
+  query: Query,
+  ...queryArgs: OptionalRestArgsOrSkip<Query>
+): {
+  data: Query["_returnType"] | undefined;
+  isStale: boolean;
+} {
+  const { isAuthenticated } = useAuth();
 
   // NB. for data, undefined means "not loaded yet" and null means "no data"
   const [staleData, setStaleData] = useState<
@@ -139,11 +230,11 @@ export function useColdCachedQuery<Query extends FunctionReference<"query">>(
     setStaleData(undefined);
     currentCacheKey.current = hashCacheKey(queryName, convexToJson(argsObject));
     setLastSeenArgs(currentArgsString);
-    console.log("Query changed, resetting cache", {
-      oldArgs: lastSeenArgs,
-      newArgs: currentArgsString,
-      newCacheKey: currentCacheKey.current,
-    });
+    // console.log("Query changed, resetting cache", {
+    //   oldArgs: lastSeenArgs,
+    //   newArgs: currentArgsString,
+    //   newCacheKey: currentCacheKey.current,
+    // });
   }
 
   // load remote data
@@ -160,10 +251,10 @@ export function useColdCachedQuery<Query extends FunctionReference<"query">>(
     if (!cache.isReady) return;
 
     const data = cache.get(currentCacheKey.current);
-    console.log("get from cache", {
-      cacheKey: currentCacheKey.current,
-      data,
-    });
+    // console.log("get from cache", {
+    //   cacheKey: currentCacheKey.current,
+    //   data,
+    // });
     if (data !== undefined) {
       setStaleData(data);
     } else {
@@ -181,10 +272,10 @@ export function useColdCachedQuery<Query extends FunctionReference<"query">>(
     if (remoteData === undefined || remoteData === null) return;
 
     cache.set(currentCacheKey.current, remoteData);
-    console.log("set to cache", {
-      cacheKey: currentCacheKey.current,
-      data: remoteData,
-    });
+    // console.log("set to cache", {
+    //   cacheKey: currentCacheKey.current,
+    //   data: remoteData,
+    // });
   }, [remoteData, cache, isSkip]);
 
   if (remoteData === undefined && staleData === undefined) {

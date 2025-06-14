@@ -5,10 +5,10 @@ import TmpChatInput from "./tmp-chat-input";
 import { BotIcon } from "lucide-react";
 import { ChatMessage } from "./chat-message";
 import { useChatCache } from "@/providers/ChatCacheProvider";
-import { Preloaded } from "convex/react";
+import { Preloaded, useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useColdCachedQuery } from "@/hooks/useColdCachedQuery";
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { parseMessages } from "@/lib/parser";
 import { useHotCachedQuery } from "@/hooks/useHotCachedQuery";
 
@@ -18,7 +18,6 @@ interface ChatProps {
 
 export default function Chat({ threadPromise }: ChatProps) {
   const { currentThreadId } = useChatCache();
-  // const test = usePreloadedQuery(threadPromise);
 
   const { data: currentThread, isStale } = useColdCachedQuery(
     // const isStale = false;
@@ -31,20 +30,42 @@ export default function Chat({ threadPromise }: ChatProps) {
       : "skip"
   );
 
+  // const isStale = false;
+  // const currentThread = useQuery(
+  //   // const isStale = false;
+  //   // const currentThread = useHotCachedQuery(
+  //   api.chat.getChat,
+  //   currentThreadId
+  //     ? {
+  //         uuid: currentThreadId,
+  //       }
+  //     : "skip"
+  // );
+
   const initialMessages: Message[] = useMemo(() => {
     if (!currentThread) return [];
     if (!currentThread.messages) return [];
+
     return parseMessages(currentThread.messages);
   }, [currentThread]);
 
-  const { input, handleInputChange, handleSubmit, messages, reload } = useChat({
+  const { input, handleInputChange, handleSubmit, messages } = useChat({
     api: "/api/chat",
     id: currentThreadId, // use the provided chat ID
     initialMessages, // initial messages if provided
+
     sendExtraMessageFields: true, // send id and createdAt for each message
     // only send the last message to the server:
     experimental_prepareRequestBody({ messages, id }) {
       return { message: messages[messages.length - 1], id };
+    },
+
+    onFinish: (message) => {
+      console.log("🔍 Finished message:", message);
+    },
+
+    onError: (error) => {
+      console.error("🔍 useChat error:", error);
     },
 
     onResponse: async (response) => {
@@ -60,7 +81,7 @@ export default function Chat({ threadPromise }: ChatProps) {
       <div className="max-w-3xl mx-auto space-y-5 p-4">
         <div className="aria-hidden h-10"></div>
         <div className="text-sm text-muted-foreground">
-          {currentThreadId ?? "null"}
+          {currentThreadId ?? "null"} {messages.length} {initialMessages.length}
         </div>
 
         {currentThread === undefined ? (
@@ -76,7 +97,7 @@ export default function Chat({ threadPromise }: ChatProps) {
                 id: message.id,
                 content: message.content,
                 role: message.role as "user" | "assistant",
-                timestamp: new Date(), // Use current time since we stripped createdAt
+                timestamp: message.createdAt,
               }}
             />
           ))
@@ -88,7 +109,7 @@ export default function Chat({ threadPromise }: ChatProps) {
         input={input}
         onChange={handleInputChange}
         onSubmit={handleSubmit}
-        disabled={false /*TODO: add loading state */}
+        disabled={currentThread === undefined}
       />
     </div>
   );

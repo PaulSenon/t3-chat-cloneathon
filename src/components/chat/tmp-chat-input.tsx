@@ -15,43 +15,17 @@ export interface TmpChatInputProps {
 const MemoButton = React.memo(Button);
 const MemoTextarea = React.memo(Textarea);
 
-export default function TmpChatInput({}: TmpChatInputProps) {
-  const [isDisabled, setIsDisabled] = useState(false);
-  const { currentThreadId, setCurrentThreadId } = useChatCache();
-
-  const { input, handleInputChange, handleSubmit } = useChat({
-    api: "/api/chat",
-    id: currentThreadId, // use the provided chat ID
-    sendExtraMessageFields: true, // send id and createdAt for each message
-    // only send the last message to the server:
-    experimental_prepareRequestBody({ messages, id }) {
-      return { message: messages[messages.length - 1], id };
-    },
-
-    onResponse: async (response) => {
-      // Handle new thread creation
-      const threadId = response.headers.get("X-Thread-Id");
-      console.log("threadId", threadId);
-    },
-  });
-
-  useEffect(() => {
-    setIsDisabled(false);
-  }, []);
-
-  const _handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (currentThreadId) {
-      setCurrentThreadId(currentThreadId);
-    }
-    handleSubmit?.(e);
-  };
-
+export default function TmpChatInput({
+  disabled,
+  input,
+  onChange,
+  onSubmit,
+}: TmpChatInputProps) {
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       // TODO change this horrible type cast
-      _handleSubmit?.(e as unknown as React.FormEvent<HTMLFormElement>);
+      onSubmit?.(e as unknown as React.FormEvent<HTMLFormElement>);
     }
   };
 
@@ -60,7 +34,7 @@ export default function TmpChatInput({}: TmpChatInputProps) {
       <div className="relative mx-auto flex w-full max-w-3xl flex-col text-center">
         <div className="pointer-events-auto border-reflect rounded-t-[20px] bg-accent/50 p-2 pb-0 backdrop-blur-md">
           <form
-            onSubmit={_handleSubmit}
+            onSubmit={onSubmit}
             className="flex w-full flex-col items-stretch gap-2 rounded-t-xl border border-b-0 border-white/90 bg-background/50 dark:bg-background-none px-3 pt-3 text-secondary-foreground dark:border-white/10"
             style={{
               boxShadow:
@@ -71,7 +45,7 @@ export default function TmpChatInput({}: TmpChatInputProps) {
               <div className="flex flex-grow flex-row items-start">
                 <MemoTextarea
                   value={input}
-                  onChange={handleInputChange}
+                  onChange={onChange}
                   onKeyDown={handleKeyDown}
                   placeholder={currentThreadId ?? "null"}
                   className="w-full resize-none bg-transparent dark:bg-transparent text-base leading-6 text-foreground outline-none border-none shadow-none focus-visible:ring-0 placeholder:text-secondary-foreground/60 disabled:opacity-50"
@@ -82,7 +56,7 @@ export default function TmpChatInput({}: TmpChatInputProps) {
                 <div className="-mr-0.5 -mt-0.5 flex items-center justify-center">
                   <MemoButton
                     type="submit"
-                    disabled={isDisabled}
+                    disabled={disabled}
                     className="h-9 w-9 rounded-lg bg-primary font-semibold shadow hover:bg-primary/90 disabled:opacity-50"
                   >
                     <SendIcon className="h-5 w-5" />

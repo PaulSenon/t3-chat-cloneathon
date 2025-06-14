@@ -31,6 +31,7 @@ function saveToLocalStorage(data: [string, object][]) {
 interface LocalCacheContextType {
   get: (key: string) => object | undefined;
   set: (key: string, value: object) => void;
+  delete: (key: string) => void;
   isReady: boolean;
 }
 
@@ -65,6 +66,11 @@ export function LocalCacheProvider({
     saveToLocalStorage(Array.from(cacheRef.current.entries()));
   };
 
+  const del = (key: string) => {
+    cacheRef.current.delete(key);
+    saveToLocalStorage(Array.from(cacheRef.current.entries()));
+  };
+
   // const map = useMemo(() => new Map<string, object>(), []);
   // useEffect(() => {
   //   try {
@@ -94,7 +100,9 @@ export function LocalCacheProvider({
   // };
 
   return (
-    <LocalCacheContext.Provider value={{ get, set, isReady: ready }}>
+    <LocalCacheContext.Provider
+      value={{ get, set, delete: del, isReady: ready }}
+    >
       {children}
     </LocalCacheContext.Provider>
   );
