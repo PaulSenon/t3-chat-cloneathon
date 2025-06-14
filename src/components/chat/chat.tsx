@@ -11,13 +11,15 @@ import { useColdCachedQuery } from "@/hooks/useColdCachedQuery";
 import { useEffect, useMemo, useRef } from "react";
 import { parseMessages } from "@/lib/parser";
 import { useHotCachedQuery } from "@/hooks/useHotCachedQuery";
+import { useParams } from "next/navigation";
 
 interface ChatProps {
   threadPromise: Preloaded<typeof api.chat.getChat> | null;
 }
 
 export default function Chat({ threadPromise }: ChatProps) {
-  const { currentThreadId } = useChatCache();
+  const { id } = useParams();
+  const { currentThreadId, createNewThread } = useChatCache();
 
   const { data: currentThread, isStale } = useColdCachedQuery(
     // const isStale = false;
@@ -74,6 +76,14 @@ export default function Chat({ threadPromise }: ChatProps) {
       console.log("threadId", threadId);
     },
   });
+
+  const _handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    if (!id) {
+      createNewThread();
+    }
+    e.preventDefault();
+    handleSubmit(e);
+  };
 
   // simplified rendering code, extend as needed:
   return (

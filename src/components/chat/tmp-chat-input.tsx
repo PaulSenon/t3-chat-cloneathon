@@ -21,6 +21,7 @@ export default function TmpChatInput({
   onChange,
   onSubmit,
 }: TmpChatInputProps) {
+  const { currentThreadId } = useChatCache();
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
