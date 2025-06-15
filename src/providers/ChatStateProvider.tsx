@@ -34,18 +34,20 @@ export function ChatStateProvider({ children }: { children: ReactNode }) {
     currentThreadId: threadIdFromUrl,
   });
 
-  // Sync with URL changes
   useEffect(() => {
-    setState((prev) => ({
-      ...prev,
-      currentThreadId: threadIdFromUrl,
-    }));
-  }, [threadIdFromUrl]);
+    if (!state.currentThreadId) {
+      setState((prev) => ({
+        ...prev,
+        currentThreadId: crypto.randomUUID(),
+      }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const actions = {
-    handleInputChange: (chatId: string | undefined) => {
+    handleInputChange: (_chatId: string | undefined) => {
       // TODO: Input caching placeholder - just log for now
-      console.log("💬 Input changed for chat:", chatId);
+      console.log("💬 Input changed for chat:", _chatId);
     },
 
     handleSubmit: (chatId: string | undefined) => {
@@ -57,7 +59,8 @@ export function ChatStateProvider({ children }: { children: ReactNode }) {
       );
 
       // If on /chat (no thread ID), redirect to /chat/chatId and set currentThreadId
-      if (!state.currentThreadId && chatId) {
+      if (!state.currentThreadId) {
+        const chatId = crypto.randomUUID();
         setState((prev) => ({
           ...prev,
           currentThreadId: chatId,
@@ -79,7 +82,7 @@ export function ChatStateProvider({ children }: { children: ReactNode }) {
     openNewChat: () => {
       setState((prev) => ({
         ...prev,
-        currentThreadId: undefined,
+        currentThreadId: crypto.randomUUID(),
       }));
       window.history.pushState(null, "", "/chat");
     },
@@ -87,7 +90,7 @@ export function ChatStateProvider({ children }: { children: ReactNode }) {
     clear: () => {
       setState((prev) => ({
         ...prev,
-        currentThreadId: undefined,
+        currentThreadId: crypto.randomUUID(),
       }));
     },
   };

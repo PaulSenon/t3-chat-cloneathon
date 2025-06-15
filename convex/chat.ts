@@ -53,6 +53,43 @@ export const createChat = mutationWithRLS({
   },
 });
 
+export const setChatTitle = mutationWithRLS({
+  args: {
+    uuid: v.string(),
+    title: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const thread = await ctx.db
+      .query("threads")
+      .withIndex("byUuid", (q) => q.eq("uuid", args.uuid))
+      .unique();
+    if (!thread) {
+      return null;
+    }
+
+    await ctx.db.patch(thread._id, {
+      title: args.title,
+    });
+  },
+});
+
+export const deleteChat = mutationWithRLS({
+  args: {
+    uuid: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const thread = await ctx.db
+      .query("threads")
+      .withIndex("byUuid", (q) => q.eq("uuid", args.uuid))
+      .unique();
+    if (!thread) {
+      return null;
+    }
+
+    await ctx.db.delete(thread._id);
+  },
+});
+
 export const getChat = queryWithRLS({
   args: {
     uuid: v.string(),

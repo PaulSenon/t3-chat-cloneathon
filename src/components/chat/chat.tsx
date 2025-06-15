@@ -47,7 +47,6 @@ export default function Chat() {
     handleInputChange: chatHandleInputChange,
     handleSubmit: chatHandleSubmit,
     messages,
-    id: chatId,
   } = useChat({
     api: "/api/chat",
     id: currentThreadId, // use the provided chat ID
@@ -73,34 +72,26 @@ export default function Chat() {
     },
   });
 
-  const isNewThread = currentThreadId === undefined;
+  const isNewThread = messages.length === 0;
 
   useEffect(() => {
     console.log("chat debug", {
       currentThreadId,
       initialMessages,
       currentThread,
-      chatId,
       isLoading,
       isNewThread,
     });
-  }, [
-    currentThreadId,
-    chatId,
-    isLoading,
-    isNewThread,
-    initialMessages,
-    currentThread,
-  ]);
+  }, [currentThreadId, isLoading, isNewThread, initialMessages, currentThread]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    actions.handleInputChange(chatId); // TODO: perhaps saving the input in case of page reload to restore it. We should keep one cached input state per chat id. and perhaps one shared when we are on /chat (because id not persisted yet)
+    actions.handleInputChange(""); // TODO: perhaps saving the input in case of page reload to restore it. We should keep one cached input state per chat id. and perhaps one shared when we are on /chat (because id not persisted yet)
     chatHandleInputChange(e); // update the chat
   };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    actions.handleSubmit(chatId); // TODO: if was on /chat, we shallow redirect to /chat/chatId, and set the currentThreadId to chatId. If was on /chat/id, we will do nothing.
+    actions.handleSubmit(""); // TODO: if was on /chat, we shallow redirect to /chat/chatId, and set the currentThreadId to chatId. If was on /chat/id, we will do nothing.
     chatHandleSubmit(e);
   };
 

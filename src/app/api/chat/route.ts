@@ -4,11 +4,12 @@ import {
   appendClientMessage,
   Message,
 } from "ai";
-import { openai } from "@ai-sdk/openai";
 import { auth } from "@clerk/nextjs/server";
 import { fetchMutation, fetchQuery } from "convex/nextjs";
 import { api } from "../../../../convex/_generated/api";
 import superjson from "superjson";
+import { registry } from "@/backend/aiProviderRegistry";
+import { generateChatTitle } from "@/backend/chatTitleGeneration";
 
 export const maxDuration = 30;
 
@@ -29,17 +30,30 @@ export async function POST(req: Request) {
   console.log("🔍 Received message:", message.id);
 
   // load the previous messages from the server or create a new thread:
+  const existingThread = await fetchQuery(
+    api.chat.getChat,
+    { uuid: id },
+    { token }
+  );
+
   const thread =
-    // TODO create a appendNewMessages to add the user one asap
-    (await fetchQuery(api.chat.getChat, { uuid: id }, { token })) ??
+    existingThread ??
     (await fetchMutation(
       api.chat.createChat,
-      {
-        uuid: id,
-        messages: superjson.stringify([message]),
-      },
+      { uuid: id, messages: superjson.stringify([message]) },
       { token }
     ));
+  // const thread =
+  //   // TODO create a appendNewMessages to add the user one asap
+  //   (await fetchQuery(api.chat.getChat, { uuid: id }, { token })) ??
+  //   (await fetchMutation(
+  //     api.chat.createChat,
+  //     {
+  //       uuid: id,
+  //       messages: superjson.stringify([message]),
+  //     },
+  //     { token }
+  //   ));
 
   if (!thread) {
     throw new Error("Failed to create or get thread");
@@ -48,14 +62,6 @@ export async function POST(req: Request) {
   const pastMessages: Message[] = thread.messages
     ? superjson.parse(thread.messages)
     : [];
-  console.log(
-    "🔍 fetched past thread messages:",
-    JSON.stringify(
-      pastMessages.map((m) => m.id),
-      null,
-      2
-    )
-  );
 
   // append the new message to the previous messages:
   const messages = appendClientMessage({
@@ -63,20 +69,18 @@ export async function POST(req: Request) {
     message,
   });
 
-  console.log(
-    "🔍 new list of messages:",
-    JSON.stringify(
-      messages.map((m) => m.id),
-      null,
-      2
-    )
-  );
+  if (!existingThread || !existingThread.title) {
+    generateChatTitle(messages).then((title) => {
+      console.log("🔍 Generated title:", title);
+      fetchMutation(api.chat.setChatTitle, { uuid: id, title }, { token });
+    });
+  }
 
   const result = streamText({
-    model: openai("gpt-4o-mini"),
+    model: registry.languageModel("openai:fast"),
     messages,
     async onFinish({ response }) {
-      console.log("🔍 Response:", JSON.stringify(response, null, 2));
+      // console.log("🔍 Response:", JSON.stringify(response, null, 2));
       const newMessages = appendResponseMessages({
         messages,
         responseMessages: response.messages,

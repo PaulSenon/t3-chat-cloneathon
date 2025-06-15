@@ -102,14 +102,14 @@ export function useColdCachedPaginatedQuery<
 
   const isRemoteDataLoading = remotePaginatedData.isLoading;
 
-  console.log("DEBUG: results", {
-    isPaginatedLoadingBug,
-    isRemoteDataLoading,
-    stalePaginatedData,
-    remotePaginatedData,
-    isUserSignedIn,
-    isAuthenticated,
-  });
+  // console.log("DEBUG: results", {
+  //   isPaginatedLoadingBug,
+  //   isRemoteDataLoading,
+  //   stalePaginatedData,
+  //   remotePaginatedData,
+  //   isUserSignedIn,
+  //   isAuthenticated,
+  // });
 
   if (!isUserSignedIn) {
     return {

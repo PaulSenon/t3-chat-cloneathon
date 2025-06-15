@@ -16,6 +16,7 @@ export const env = createEnv({
     // AI Providers
     OPENAI_API_KEY: z.string(),
     ANTHROPIC_API_KEY: z.string(),
+    GEMINI_API_KEY: z.string(),
 
     // Next.js specific
     NODE_ENV: z
@@ -60,6 +61,7 @@ export const env = createEnv({
     // AI Providers
     OPENAI_API_KEY: process.env.OPENAI_API_KEY,
     ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
+    GEMINI_API_KEY: process.env.GEMINI_API_KEY,
 
     // Next.js specific
     NODE_ENV: process.env.NODE_ENV,
