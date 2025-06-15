@@ -13,7 +13,7 @@ export function useStableCachedQuery<Query extends FunctionReference<"query">>(
   ...queryArgs: OptionalRestArgsOrSkip<Query>
 ): FunctionReturnType<Query> | undefined {
   console.log("useStableCachedQuery", getFunctionName(query), queryArgs);
-  const { isAuthenticated } = useAuth();
+  const { isFullyReady: isAuthenticated } = useAuth();
   const result = useCachedQuery(
     query,
     ...(isAuthenticated ? queryArgs : ["skip"])
