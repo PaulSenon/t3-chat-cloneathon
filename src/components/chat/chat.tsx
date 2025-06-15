@@ -46,7 +46,7 @@ export default function Chat() {
     // const isStale = false;
     // const currentThread = useHotCachedQuery(
     api.chat.getChat,
-    currentThreadId
+    currentThreadId && !isNewThread
       ? {
           uuid: currentThreadId,
         }
@@ -72,6 +72,7 @@ export default function Chat() {
     input,
     handleInputChange: chatHandleInputChange,
     handleSubmit: chatHandleSubmit,
+    status,
     messages,
   } = useChat({
     api: "/api/chat",
@@ -106,6 +107,7 @@ export default function Chat() {
       isLoading,
       isAnonymous,
       isNewThread,
+      status,
     });
   }, [
     currentThreadId,
@@ -114,23 +116,31 @@ export default function Chat() {
     initialMessages,
     currentThread,
     isAnonymous,
+    status,
   ]);
 
+  // TODO: find fix. Cool but, when we are submitting a new chat, right after submit, isNewThread is false, but currentThread is undefined.
+  // => fixed by adding status !== "submitted" but might be a bit hacky.
   useEffect(() => {
-    if (!isNewThread && !isLoading && !currentThread) {
+    if (
+      !isNewThread &&
+      !isLoading &&
+      !currentThread &&
+      status !== "submitted"
+    ) {
       console.warn("THREAD NOT FOUND", currentThreadId);
       actions.openNewChat();
     }
-  }, [isNewThread, isLoading, currentThread, currentThreadId, actions]);
+  }, [isNewThread, isLoading, currentThread, currentThreadId, actions, status]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    actions.handleInputChange(); // TODO: perhaps saving the input in case of page reload to restore it. We should keep one cached input state per chat id. and perhaps one shared when we are on /chat (because id not persisted yet)
+    actions.handleInputChange();
     chatHandleInputChange(e); // update the chat
   };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    actions.handleSubmit(); // TODO: if was on /chat, we shallow redirect to /chat/chatId, and set the currentThreadId to chatId. If was on /chat/id, we will do nothing.
+    actions.handleSubmit();
     if (currentThreadId && isNewThread) {
       createThreadOptimistic({
         uuid: currentThreadId,
