@@ -11,16 +11,18 @@ import { useParams } from "next/navigation";
 
 interface ChatState {
   currentThreadId: string | undefined;
+  isNewThread: boolean;
 }
 
 interface ChatContextValue {
   state: ChatState;
   actions: {
-    handleInputChange: (chatId: string | undefined) => void;
-    handleSubmit: (chatId: string | undefined) => void;
+    handleInputChange: () => void;
+    handleSubmit: () => void;
     openChat: (threadId: string) => void;
     openNewChat: () => void;
     clear: () => void;
+    deleteChat: (threadId: string) => void;
   };
 }
 
@@ -32,6 +34,7 @@ export function ChatStateProvider({ children }: { children: ReactNode }) {
 
   const [state, setState] = useState<ChatState>({
     currentThreadId: threadIdFromUrl,
+    isNewThread: threadIdFromUrl === undefined,
   });
 
   useEffect(() => {
@@ -45,27 +48,21 @@ export function ChatStateProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const actions = {
-    handleInputChange: (_chatId: string | undefined) => {
+    handleInputChange: () => {
       // TODO: Input caching placeholder - just log for now
-      console.log("💬 Input changed for chat:", _chatId);
+      console.log("💬 Input changed for chat:", state.currentThreadId);
     },
 
-    handleSubmit: (chatId: string | undefined) => {
-      console.log(
-        "🚀 Submit for chat:",
-        chatId,
-        "current thread:",
-        state.currentThreadId
-      );
+    handleSubmit: () => {
+      console.log("🚀 Submit for chat:", state.currentThreadId);
 
       // If on /chat (no thread ID), redirect to /chat/chatId and set currentThreadId
-      if (!state.currentThreadId) {
-        const chatId = crypto.randomUUID();
+      if (state.isNewThread) {
         setState((prev) => ({
           ...prev,
-          currentThreadId: chatId,
+          isNewThread: false,
         }));
-        window.history.pushState(null, "", `/chat/${chatId}`);
+        window.history.pushState(null, "", `/chat/${state.currentThreadId}`);
       }
 
       // If on /chat/id, do nothing (already have thread ID)
@@ -75,6 +72,7 @@ export function ChatStateProvider({ children }: { children: ReactNode }) {
       setState((prev) => ({
         ...prev,
         currentThreadId: threadId,
+        isNewThread: false,
       }));
       window.history.pushState(null, "", `/chat/${threadId}`);
     },
@@ -83,6 +81,7 @@ export function ChatStateProvider({ children }: { children: ReactNode }) {
       setState((prev) => ({
         ...prev,
         currentThreadId: crypto.randomUUID(),
+        isNewThread: true,
       }));
       window.history.pushState(null, "", "/chat");
     },
@@ -91,7 +90,18 @@ export function ChatStateProvider({ children }: { children: ReactNode }) {
       setState((prev) => ({
         ...prev,
         currentThreadId: crypto.randomUUID(),
+        isNewThread: true,
       }));
+    },
+
+    deleteChat: (threadId: string) => {
+      if (state.currentThreadId !== threadId) return;
+      setState((prev) => ({
+        ...prev,
+        currentThreadId: crypto.randomUUID(),
+        isNewThread: true,
+      }));
+      window.history.pushState(null, "", "/chat");
     },
   };
 
@@ -111,6 +121,7 @@ export function useChatState() {
 
   return {
     currentThreadId: context.state.currentThreadId,
+    isNewThread: context.state.isNewThread,
   };
 }
 

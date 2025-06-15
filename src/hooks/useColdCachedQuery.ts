@@ -37,8 +37,11 @@ export function useColdCachedPaginatedQuery<
 ): UsePaginatedQueryResult<PaginatedQueryItem<Query>> & {
   isStale: boolean;
 } {
-  const { isFullyReady: isAuthenticated, isSignedInClerk: isUserSignedIn } =
-    useAuth();
+  const {
+    isFullyReady: isAuthenticated,
+    isLoadingClerk: isLoadingAuth,
+    isSignedInClerk: isUserSignedIn,
+  } = useAuth();
   // TODO useAuth
   // NB. for staleResults, undefined means "not loaded yet" and null means "no data", empty array means "no results"
   const [stalePaginatedData, setStalePaginatedData] =
@@ -111,7 +114,14 @@ export function useColdCachedPaginatedQuery<
   //   isAuthenticated,
   // });
 
-  if (!isUserSignedIn) {
+  if (isLoadingAuth) {
+    return {
+      ...remotePaginatedData,
+      status: "LoadingFirstPage",
+      isLoading: true,
+      isStale: false,
+    };
+  } else if (!isUserSignedIn) {
     return {
       ...remotePaginatedData,
       status: "Exhausted",

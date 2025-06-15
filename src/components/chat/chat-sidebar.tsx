@@ -14,13 +14,16 @@ import { UserProfileButton } from "../auth/user-avatar";
 import { Separator } from "../ui/separator";
 import { api } from "../../../convex/_generated/api";
 import { Skeleton } from "@/components/ui/skeleton";
-import { MessageCircle } from "lucide-react";
+import { MessageCircle, Pin, X } from "lucide-react";
 import { useChatActions, useChatState } from "@/providers/ChatStateProvider";
 import { useColdCachedPaginatedQuery } from "@/hooks/useColdCachedQuery";
-interface ThreadItem {
-  title?: string;
-  uuid: string;
-}
+import {
+  optimisticallyUpdateValueInPaginatedQuery,
+  useMutation,
+} from "convex/react";
+import { Doc } from "../../../convex/_generated/dataModel";
+
+type ThreadItem = Omit<Doc<"threads">, "messages" | "metadata">;
 
 export function ChatSidebar() {
   const { currentThreadId } = useChatState();
@@ -80,15 +83,17 @@ export function ChatSidebar() {
               </div>
             ) : (
               // Thread list
-              results.map((thread) => (
-                <ThreadItemMemo
-                  key={thread._id}
-                  thread={thread}
-                  isActive={currentThreadId === thread.uuid}
-                  isStale={isStale}
-                  onClick={() => handleThreadClick(thread.uuid)}
-                />
-              ))
+              results
+                .filter((thread) => thread.status === "active")
+                .map((thread) => (
+                  <ThreadItemMemo
+                    key={thread._id}
+                    thread={thread}
+                    isActive={currentThreadId === thread.uuid}
+                    isStale={isStale}
+                    onClick={() => handleThreadClick(thread.uuid)}
+                  />
+                ))
             )}
           </div>
         </SidebarGroup>
@@ -114,20 +119,87 @@ function ThreadItem({
   isStale: boolean;
   onClick: () => void;
 }) {
+  const actions = useChatActions();
+  const deleteThread = useMutation(
+    api.chat.deleteThreadById
+  ).withOptimisticUpdate((localStore, mutationArgs) => {
+    optimisticallyUpdateValueInPaginatedQuery(
+      localStore,
+      api.chat.getUserThreadsForListing,
+      {},
+      (currentValue) => {
+        if (mutationArgs.threadId === currentValue._id) {
+          return {
+            ...currentValue,
+            status: "deleted" as const,
+          };
+        }
+        return currentValue;
+      }
+    );
+  });
+
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    actions.deleteChat(thread.uuid);
+    deleteThread({ threadId: thread._id });
+  };
+
+  const handlePin = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    console.log("Pin thread:", thread.uuid);
+  };
+
   return (
     <div
       className={cn(
-        "flex items-center gap-2 py-2 px-4 rounded-lg cursor-pointer transition-colors",
+        "group/link relative flex items-center gap-2 py-2 px-2 rounded-lg cursor-pointer transition-colors overflow-hidden",
         "hover:bg-accent",
         isActive && "bg-accent",
         isStale && "opacity-50"
       )}
       onClick={onClick}
     >
-      <div className="flex-1 min-w-0">
-        <div className="text-sm font-small truncate">
-          {thread.title ?? thread.uuid}
+      <div className="relative flex w-full items-center">
+        <div className="flex-1 min-w-0 px-2">
+          {thread.title ? (
+            <div className="text-sm truncate">{thread.title}</div>
+          ) : (
+            <Skeleton className="bg-sidebar-border w-3/4 h-5" />
+          )}
         </div>
+
+        {/* Context Actions - Hidden by default, shown on hover */}
+        {!isStale && (
+          <div className="pointer-events-auto absolute -right-1 bottom-0 top-0 z-50 flex translate-x-full items-center justify-end text-muted-foreground transition-transform group-hover/link:translate-x-0 group-hover/link:bg-accent">
+            {/* Gradient overlay for smooth visual transition */}
+            <div className="pointer-events-none absolute bottom-0 right-[100%] top-0 h-full w-8 bg-gradient-to-l from-accent to-transparent opacity-0 group-hover/link:opacity-100 transition-opacity" />
+
+            {/* Pin button */}
+            {/* <button
+              className="rounded-md p-1.5 cursor-pointer hover:bg-sidebar hover:text-secondary-foreground transition-colors"
+              tabIndex={-1}
+              onClick={handlePin}
+              aria-label="Pin thread"
+              type="button"
+              disabled={isStale}
+            >
+              <Pin className="size-4" />
+            </button> */}
+
+            {/* Delete button */}
+            <button
+              className="rounded-md p-1.5 cursor-pointer hover:bg-destructive/80 hover:text-secondary-foreground transition-colors"
+              tabIndex={-1}
+              onClick={handleDelete}
+              aria-label="Delete thread"
+              type="button"
+              disabled={isStale}
+            >
+              <X className="size-4" />
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

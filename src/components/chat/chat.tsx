@@ -9,10 +9,35 @@ import { useColdCachedQuery } from "@/hooks/useColdCachedQuery";
 import { useEffect, useMemo } from "react";
 import { parseMessages } from "@/lib/parser";
 import { useChatState, useChatActions } from "@/providers/ChatStateProvider";
+import { insertAtTop, useMutation } from "convex/react";
+import { Id } from "../../../convex/_generated/dataModel";
+import superjson from "superjson";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function Chat() {
-  const { currentThreadId } = useChatState();
+  const { isAnonymous } = useAuth();
+  const { currentThreadId, isNewThread } = useChatState();
   const actions = useChatActions();
+
+  const createThreadOptimistic = useMutation(
+    api.chat.createChat
+  ).withOptimisticUpdate((localStore, mutationArgs) => {
+    insertAtTop({
+      paginatedQuery: api.chat.getUserThreadsForListing,
+      argsToMatch: {}, // same args as in the sidebar
+      localQueryStore: localStore,
+      item: {
+        _id: crypto.randomUUID() as Id<"threads">,
+        uuid: mutationArgs.uuid,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        status: "active",
+        title: undefined,
+        userId: crypto.randomUUID() as Id<"users">,
+        _creationTime: Date.now(),
+      },
+    });
+  });
 
   // fetch the current thread (only if we have an id (not on /chat))
   const { data: currentThread, isStale } = useColdCachedQuery(
@@ -27,7 +52,8 @@ export default function Chat() {
         }
       : "skip"
   ); // undefined = loading, null = no thread
-  const isLoading = currentThreadId && currentThread === undefined;
+  const isLoading =
+    !isAnonymous && currentThreadId && currentThread === undefined;
 
   // we need to parse the messages if we received a thread
   const initialMessages = useMemo(() => {
@@ -68,11 +94,9 @@ export default function Chat() {
     onResponse: async (response) => {
       // Handle new thread creation
       const threadId = response.headers.get("X-Thread-Id");
-      console.log("threadId", threadId);
+      console.log("real threadId from server", threadId);
     },
   });
-
-  const isNewThread = messages.length === 0;
 
   useEffect(() => {
     console.log("chat debug", {
@@ -80,18 +104,39 @@ export default function Chat() {
       initialMessages,
       currentThread,
       isLoading,
+      isAnonymous,
       isNewThread,
     });
-  }, [currentThreadId, isLoading, isNewThread, initialMessages, currentThread]);
+  }, [
+    currentThreadId,
+    isLoading,
+    isNewThread,
+    initialMessages,
+    currentThread,
+    isAnonymous,
+  ]);
+
+  useEffect(() => {
+    if (!isNewThread && !isLoading && !currentThread) {
+      console.warn("THREAD NOT FOUND", currentThreadId);
+      actions.openNewChat();
+    }
+  }, [isNewThread, isLoading, currentThread, currentThreadId, actions]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    actions.handleInputChange(""); // TODO: perhaps saving the input in case of page reload to restore it. We should keep one cached input state per chat id. and perhaps one shared when we are on /chat (because id not persisted yet)
+    actions.handleInputChange(); // TODO: perhaps saving the input in case of page reload to restore it. We should keep one cached input state per chat id. and perhaps one shared when we are on /chat (because id not persisted yet)
     chatHandleInputChange(e); // update the chat
   };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    actions.handleSubmit(""); // TODO: if was on /chat, we shallow redirect to /chat/chatId, and set the currentThreadId to chatId. If was on /chat/id, we will do nothing.
+    actions.handleSubmit(); // TODO: if was on /chat, we shallow redirect to /chat/chatId, and set the currentThreadId to chatId. If was on /chat/id, we will do nothing.
+    if (currentThreadId && isNewThread) {
+      createThreadOptimistic({
+        uuid: currentThreadId,
+        messages: superjson.stringify(messages),
+      });
+    }
     chatHandleSubmit(e);
   };
 
@@ -105,10 +150,10 @@ export default function Chat() {
           {initialMessages?.length}
         </div>
 
-        {isLoading ? (
-          <LoadingChatPlaceholder />
-        ) : isNewThread ? (
+        {isNewThread ? (
           <NewChatPlaceholder />
+        ) : isLoading ? (
+          <LoadingChatPlaceholder />
         ) : (
           messages.map((message) => (
             <ChatMessage

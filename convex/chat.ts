@@ -4,7 +4,6 @@ import { queryWithRLS, mutationWithRLS } from "./rls";
 import { INTERNAL_getCurrentUserOrThrow } from "./lib";
 import { paginationOptsValidator } from "convex/server";
 import { Doc } from "./_generated/dataModel";
-import type { Message } from "ai";
 
 export const saveChat = mutationWithRLS({
   args: {
@@ -33,6 +32,15 @@ export const createChat = mutationWithRLS({
   },
   handler: async (ctx, args) => {
     const user = await INTERNAL_getCurrentUserOrThrow(ctx);
+
+    // ensure the thread does not exist
+    const existingThread = await ctx.db
+      .query("threads")
+      .withIndex("byUuid", (q) => q.eq("uuid", args.uuid))
+      .unique();
+    if (existingThread) {
+      throw new ConvexError("Thread already exists");
+    }
 
     const now = Date.now();
     const threadId = await ctx.db.insert("threads", {
@@ -86,7 +94,21 @@ export const deleteChat = mutationWithRLS({
       return null;
     }
 
-    await ctx.db.delete(thread._id);
+    await ctx.db.patch(thread._id, {
+      status: "deleted",
+    });
+  },
+});
+
+export const deleteThreadById = mutationWithRLS({
+  args: {
+    threadId: v.id("threads"),
+  },
+  handler: async (ctx, args) => {
+    // The RLS wrapper will ensure the user can only delete their own threads.
+    await ctx.db.patch(args.threadId, {
+      status: "deleted",
+    });
   },
 });
 
