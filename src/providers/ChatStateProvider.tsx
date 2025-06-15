@@ -20,6 +20,7 @@ interface ChatContextValue {
     handleSubmit: (chatId: string | undefined) => void;
     openChat: (threadId: string) => void;
     openNewChat: () => void;
+    clear: () => void;
   };
 }
 
@@ -81,6 +82,13 @@ export function ChatStateProvider({ children }: { children: ReactNode }) {
         currentThreadId: undefined,
       }));
       window.history.pushState(null, "", "/chat");
+    },
+
+    clear: () => {
+      setState((prev) => ({
+        ...prev,
+        currentThreadId: undefined,
+      }));
     },
   };
 

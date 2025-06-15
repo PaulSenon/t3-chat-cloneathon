@@ -37,6 +37,7 @@ export function useColdCachedPaginatedQuery<
 ): UsePaginatedQueryResult<PaginatedQueryItem<Query>> & {
   isStale: boolean;
 } {
+  const { isAuthenticated } = useAuth();
   // TODO useAuth
   // NB. for staleResults, undefined means "not loaded yet" and null means "no data", empty array means "no results"
   const [stalePaginatedData, setStalePaginatedData] =
@@ -49,7 +50,11 @@ export function useColdCachedPaginatedQuery<
   const cache = useLocalCache();
 
   // load remote paginated data
-  const remotePaginatedData = useHotCachedPaginatedQuery(query, args, options);
+  const remotePaginatedData = useHotCachedPaginatedQuery(
+    query,
+    isAuthenticated ? args : "skip",
+    options
+  );
 
   // load stale data from cache if available
   useEffect(() => {
@@ -70,6 +75,8 @@ export function useColdCachedPaginatedQuery<
   useEffect(() => {
     // don't save to cache if skip mode
     if (isSkip) return;
+    // don't save to cache if user is not authenticated
+    if (!isAuthenticated) return;
     // don't save to cache if cache not ready
     if (!cache.isReady) return;
     // don't save to cache if remote data is still loading initially
@@ -77,7 +84,7 @@ export function useColdCachedPaginatedQuery<
 
     // Save the current results array to cache
     cache.set(cacheKey.current, remotePaginatedData);
-  }, [remotePaginatedData, cache, isSkip]);
+  }, [remotePaginatedData, cache, isSkip, isAuthenticated]);
 
   // This is a weird bug where the paginated query says Exhausted and isLoading is false, but there is an empty array of results. The results are coming 1ms later but it flickers the "loaded but empty" state of UI. Instead we return stale data if it's available
   const isPaginatedLoadingBug =
@@ -111,7 +118,7 @@ export function useColdCachedQuery<Query extends FunctionReference<"query">>(
   data: Query["_returnType"] | undefined;
   isStale: boolean;
 } {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isUserSignedIn } = useAuth();
   const {
     isReady: isCacheReady,
     get: getCache,
@@ -155,6 +162,7 @@ export function useColdCachedQuery<Query extends FunctionReference<"query">>(
 
   // persist remote data to cache when results change
   useEffect(() => {
+    if (!isUserSignedIn) return;
     if (isSkip) return;
     if (cacheKey === null) return;
     if (remoteData === undefined) return; // don't store while loading
@@ -165,13 +173,13 @@ export function useColdCachedQuery<Query extends FunctionReference<"query">>(
       });
       deleteCache(cacheKey);
     } else {
-      console.log("DEBUG: set to cache", {
+      console.log("11DEBUG: set to cache", {
         cacheKey,
         data: remoteData,
       });
       setCache(cacheKey, remoteData);
     }
-  }, [isSkip, cacheKey, remoteData, setCache, deleteCache]);
+  }, [isSkip, cacheKey, remoteData, setCache, deleteCache, isUserSignedIn]);
 
   if (isSkip) {
     return {
@@ -210,7 +218,7 @@ export function useColdCachedQueryDeprecated<
   data: Query["_returnType"] | undefined;
   isStale: boolean;
 } {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isUserSignedIn } = useAuth();
 
   // NB. for data, undefined means "not loaded yet" and null means "no data"
   const [staleData, setStaleData] = useState<
@@ -271,6 +279,8 @@ export function useColdCachedQueryDeprecated<
 
   // save remote data to cache
   useEffect(() => {
+    // don't save to cache if user is not authenticated
+    if (!isUserSignedIn) return;
     // don't save to cache if skip mode
     if (isSkip) return;
     // don't save to cache if cache not ready
@@ -283,7 +293,7 @@ export function useColdCachedQueryDeprecated<
     //   cacheKey: currentCacheKey.current,
     //   data: remoteData,
     // });
-  }, [remoteData, cache, isSkip]);
+  }, [remoteData, cache, isSkip, isUserSignedIn]);
 
   if (remoteData === undefined && staleData === undefined) {
     return {
