@@ -55,7 +55,7 @@ export const ChatMessage = React.memo(function ChatMessage({
         role="article"
         aria-label={isUser ? "Your message" : "Assistant message"}
         className={cn(
-          "group relative inline-block max-w-[80%] break-words rounded-xl px-4 py-3 text-left",
+          "group relative inline-block max-w-[80%] break-words rounded-xl px-4 py-3 text-left transition-discrete duration-250",
           isUser
             ? "border border-secondary/50 bg-secondary/50"
             : "bg-transparent",

@@ -153,7 +153,7 @@ function ThreadItem({
   return (
     <div
       className={cn(
-        "group/link relative flex items-center gap-2 py-2 px-2 rounded-lg cursor-pointer transition-colors overflow-hidden",
+        "group/link relative flex items-center gap-2 py-2 px-2 rounded-lg cursor-pointer transition-discrete opacity-100 overflow-hidden duration-250",
         "hover:bg-accent",
         isActive && "bg-accent",
         isStale && "opacity-50"
