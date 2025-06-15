@@ -18,6 +18,7 @@ import { SignInButton } from "./auth-button";
 import { useColdCachedQuery } from "@/hooks/useColdCachedQuery";
 import { api } from "../../../convex/_generated/api";
 import { useClerk } from "@clerk/nextjs";
+import { useSidebar } from "../ui/sidebar";
 
 interface UserProfileButtonProps {
   className?: string;
@@ -118,6 +119,7 @@ const UserDropDownMenuContent = ({
   clerkUser: ClerkUser;
 }) => {
   const { signOut } = useAuthActions();
+  const { setOpenMobile } = useSidebar();
   const { openUserProfile } = useClerk();
 
   if (!isFullyReady || isAnonymous) {
@@ -141,6 +143,7 @@ const UserDropDownMenuContent = ({
         <DropdownMenuItem
           className="cursor-pointer"
           onClick={() => {
+            setOpenMobile(false);
             openUserProfile();
           }}
         >

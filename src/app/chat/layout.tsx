@@ -11,15 +11,15 @@ export default function ChatLayout({
 }) {
   return (
     <LocalCacheProvider>
-      <ChatStateProvider>
-        <SidebarProvider>
+      <SidebarProvider>
+        <ChatStateProvider>
           <ChatSidebar />
           <main className="relative w-full">
-            <SidebarTrigger className="fixed left-3 top-3 z-50 flex p-1 top-safe-offset-2" />
+            <SidebarTrigger className="fixed left-3 top-3 z-50 flex p-4 bg-background-transparent backdrop-blur-md top-safe-offset-2" />
             {children}
           </main>
-        </SidebarProvider>
-      </ChatStateProvider>
+        </ChatStateProvider>
+      </SidebarProvider>
     </LocalCacheProvider>
   );
 }

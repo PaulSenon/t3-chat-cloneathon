@@ -9,6 +9,7 @@ import {
   SidebarGroup,
   SidebarHeader,
   SidebarGroupLabel,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { UserProfileButton } from "../auth/user-avatar";
 import { Separator } from "../ui/separator";

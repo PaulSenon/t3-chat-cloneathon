@@ -8,6 +8,8 @@ import {
   ReactNode,
 } from "react";
 import { useParams } from "next/navigation";
+import { useSidebar } from "@/components/ui/sidebar";
+import { focusInput } from "@/components/chat/tmp-chat-input";
 
 interface ChatState {
   currentThreadId: string | undefined;
@@ -36,6 +38,8 @@ export function ChatStateProvider({ children }: { children: ReactNode }) {
     currentThreadId: threadIdFromUrl,
     isNewThread: threadIdFromUrl === undefined,
   });
+
+  const { setOpenMobile } = useSidebar();
 
   useEffect(() => {
     if (!state.currentThreadId) {
@@ -75,6 +79,8 @@ export function ChatStateProvider({ children }: { children: ReactNode }) {
         isNewThread: false,
       }));
       window.history.pushState(null, "", `/chat/${threadId}`);
+      setOpenMobile(false);
+      focusInput(); // TODO: focus input
     },
 
     openNewChat: () => {
@@ -84,6 +90,8 @@ export function ChatStateProvider({ children }: { children: ReactNode }) {
         isNewThread: true,
       }));
       window.history.pushState(null, "", "/chat");
+      setOpenMobile(false);
+      focusInput(); // TODO: focus input
     },
 
     clear: () => {

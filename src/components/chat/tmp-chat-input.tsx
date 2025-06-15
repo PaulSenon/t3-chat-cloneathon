@@ -15,12 +15,27 @@ export interface TmpChatInputProps {
 const MemoButton = React.memo(Button);
 const MemoTextarea = React.memo(Textarea);
 
+// yolo
+export const focusInput = () => {
+  console.log("focusInput");
+  const input = document.getElementById("chat-input");
+  if (input) {
+    requestAnimationFrame(() => {
+      input.focus();
+    });
+  }
+};
+
 export default function TmpChatInput({
   disabled,
   input,
   onChange,
   onSubmit,
 }: TmpChatInputProps) {
+  useEffect(() => {
+    focusInput();
+  }, []);
+
   const { currentThreadId } = useChatState();
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -45,6 +60,7 @@ export default function TmpChatInput({
             <div className="flex flex-grow flex-col">
               <div className="flex flex-grow flex-row items-start">
                 <MemoTextarea
+                  id="chat-input"
                   value={input}
                   onChange={onChange}
                   onKeyDown={handleKeyDown}

@@ -9,6 +9,7 @@ import { LogIn, LogOut, UserPlus } from "lucide-react";
 
 import { useAuthActions } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
+import { useSidebar } from "../ui/sidebar";
 
 type ButtonProps = React.ComponentPropsWithoutRef<typeof Button>;
 
@@ -18,9 +19,16 @@ type ButtonProps = React.ComponentPropsWithoutRef<typeof Button>;
  */
 export const SignInButton = React.forwardRef<HTMLButtonElement, ButtonProps>(
   (props, ref) => {
+    const { setOpenMobile } = useSidebar();
     return (
       <ClerkSignInButton mode="modal">
-        <Button {...props} ref={ref}>
+        <Button
+          {...props}
+          ref={ref}
+          onClick={() => {
+            setOpenMobile(false);
+          }}
+        >
           <LogIn className="mr-2 h-4 w-4" />
           Sign In
         </Button>
