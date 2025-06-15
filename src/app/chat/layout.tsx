@@ -1,3 +1,4 @@
+import "./chat.css";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { ChatSidebar } from "@/components/chat/chat-sidebar";
 import { ChatStateProvider } from "@/providers/ChatStateProvider";

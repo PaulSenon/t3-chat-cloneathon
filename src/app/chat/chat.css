@@ -1,0 +1,15 @@
+html,
+body {
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
+  position: fixed;
+  overflow: hidden;
+  width: 100%;
+  height: 100%;
+}
+
+#__next {
+  height: 100vh;
+  overflow-y: auto;
+  overscroll-behavior: none;
+}

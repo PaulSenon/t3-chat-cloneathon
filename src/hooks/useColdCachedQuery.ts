@@ -37,7 +37,8 @@ export function useColdCachedPaginatedQuery<
 ): UsePaginatedQueryResult<PaginatedQueryItem<Query>> & {
   isStale: boolean;
 } {
-  const { isAuthenticated } = useAuth();
+  const { isFullyReady: isAuthenticated, isSignedInClerk: isUserSignedIn } =
+    useAuth();
   // TODO useAuth
   // NB. for staleResults, undefined means "not loaded yet" and null means "no data", empty array means "no results"
   const [stalePaginatedData, setStalePaginatedData] =
@@ -64,7 +65,10 @@ export function useColdCachedPaginatedQuery<
     if (!cache.isReady) return;
 
     const data = cache.get(cacheKey.current);
-    console.log("data", data);
+    console.log("DEBUG: get from paginated cache", {
+      cacheKey: cacheKey.current,
+      data,
+    });
     // todo: zod validation
     if (data !== undefined) {
       setStalePaginatedData(data as UsePaginatedQueryReturnType<Query>);
@@ -75,16 +79,20 @@ export function useColdCachedPaginatedQuery<
   useEffect(() => {
     // don't save to cache if skip mode
     if (isSkip) return;
-    // don't save to cache if user is not authenticated
-    if (!isAuthenticated) return;
+    // don't save to cache if user is not signed in
+    if (!isUserSignedIn) return;
     // don't save to cache if cache not ready
     if (!cache.isReady) return;
     // don't save to cache if remote data is still loading initially
     if (remotePaginatedData.isLoading) return;
 
     // Save the current results array to cache
+    console.log("DEBUG: set to paginated cache", {
+      cacheKey: cacheKey.current,
+      data: remotePaginatedData,
+    });
     cache.set(cacheKey.current, remotePaginatedData);
-  }, [remotePaginatedData, cache, isSkip, isAuthenticated]);
+  }, [remotePaginatedData, cache, isSkip, isUserSignedIn]);
 
   // This is a weird bug where the paginated query says Exhausted and isLoading is false, but there is an empty array of results. The results are coming 1ms later but it flickers the "loaded but empty" state of UI. Instead we return stale data if it's available
   const isPaginatedLoadingBug =
@@ -92,17 +100,44 @@ export function useColdCachedPaginatedQuery<
     remotePaginatedData.results.length === 0 &&
     stalePaginatedData !== undefined;
 
-  const isRemoteDataLoading =
-    remotePaginatedData.isLoading && stalePaginatedData !== undefined;
+  const isRemoteDataLoading = remotePaginatedData.isLoading;
+
+  console.log("DEBUG: results", {
+    isPaginatedLoadingBug,
+    isRemoteDataLoading,
+    stalePaginatedData,
+    remotePaginatedData,
+    isUserSignedIn,
+    isAuthenticated,
+  });
+
+  if (!isUserSignedIn) {
+    return {
+      ...remotePaginatedData,
+      status: "Exhausted",
+      isLoading: false,
+      isStale: false,
+    };
+  }
 
   if (isPaginatedLoadingBug || isRemoteDataLoading) {
-    return {
-      loadMore: remotePaginatedData.loadMore,
-      results: stalePaginatedData.results,
-      status: stalePaginatedData.status as "Exhausted" | "CanLoadMore",
-      isLoading: false,
-      isStale: true,
-    };
+    if (!stalePaginatedData || stalePaginatedData.results.length === 0) {
+      return {
+        loadMore: remotePaginatedData.loadMore,
+        results: [],
+        status: "LoadingFirstPage",
+        isLoading: true,
+        isStale: true,
+      };
+    } else {
+      return {
+        loadMore: remotePaginatedData.loadMore,
+        results: stalePaginatedData?.results ?? [],
+        status: stalePaginatedData?.status as "Exhausted" | "CanLoadMore",
+        isLoading: false,
+        isStale: true,
+      };
+    }
   }
 
   return {
@@ -118,7 +153,8 @@ export function useColdCachedQuery<Query extends FunctionReference<"query">>(
   data: Query["_returnType"] | undefined;
   isStale: boolean;
 } {
-  const { isAuthenticated, isUserSignedIn } = useAuth();
+  const { isFullyReady: isAuthenticated, isSignedInClerk: isUserSignedIn } =
+    useAuth();
   const {
     isReady: isCacheReady,
     get: getCache,
@@ -218,7 +254,8 @@ export function useColdCachedQueryDeprecated<
   data: Query["_returnType"] | undefined;
   isStale: boolean;
 } {
-  const { isAuthenticated, isUserSignedIn } = useAuth();
+  const { isFullyReady: isAuthenticated, isSignedInClerk: isUserSignedIn } =
+    useAuth();
 
   // NB. for data, undefined means "not loaded yet" and null means "no data"
   const [staleData, setStaleData] = useState<
