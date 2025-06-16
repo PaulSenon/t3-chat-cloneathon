@@ -91,6 +91,18 @@ export async function POST(req: Request) {
         {
           uuid: thread.uuid,
           messages: superjson.stringify(newMessages),
+          liveState: "completed",
+        },
+        { token }
+      );
+    },
+    onError({ error }) {
+      console.error("🔴 Error:", error);
+      fetchMutation(
+        api.chat.updateChatLiveState,
+        {
+          id: thread._id,
+          liveState: "error",
         },
         { token }
       );
@@ -100,6 +112,14 @@ export async function POST(req: Request) {
   // consume the stream to ensure it runs to completion & triggers onFinish
   // even when the client response is aborted:
   result.consumeStream(); // no await
+  await fetchMutation(
+    api.chat.updateChatLiveState,
+    {
+      id: thread._id,
+      liveState: "streaming",
+    },
+    { token }
+  );
 
   // 6. Return streaming response with thread ID in headers
   return result.toDataStreamResponse({

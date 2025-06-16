@@ -145,6 +145,7 @@ export function ChatThreadProvider({
         createdAt: Date.now(),
         updatedAt: Date.now(),
         status: "active",
+        liveState: "pending",
         title: undefined,
         userId: crypto.randomUUID() as Id<"users">,
         _creationTime: Date.now(),

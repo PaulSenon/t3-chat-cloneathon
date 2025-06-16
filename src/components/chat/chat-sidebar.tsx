@@ -93,6 +93,7 @@ export function ChatSidebar() {
                     isActive={currentThreadId === thread.uuid}
                     isStale={isStale}
                     onClick={() => handleThreadClick(thread.uuid)}
+                    liveState={thread.liveState}
                   />
                 ))
             )}
@@ -109,16 +110,52 @@ export function ChatSidebar() {
 
 const ThreadItemMemo = React.memo(ThreadItem);
 
+function LiveStateIndicator({
+  liveState,
+}: {
+  liveState: Doc<"threads">["liveState"];
+}) {
+  const isVisible =
+    liveState === "pending" ||
+    liveState === "streaming" ||
+    liveState === "error";
+
+  // Wrapper for smooth transition
+  return (
+    <div
+      className={cn(
+        "flex items-center justify-center transition-all duration-300 ease-in-out",
+        isVisible ? "w-3" : "w-0"
+      )}
+    >
+      {liveState === "pending" || liveState === "streaming" ? (
+        <div title="Processing...">
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+          </span>
+        </div>
+      ) : liveState === "error" ? (
+        <div title="Error">
+          <span className="relative flex h-2 w-2 bg-red-500 rounded-full"></span>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function ThreadItem({
   thread,
   isActive,
   isStale,
   onClick,
+  liveState,
 }: {
   thread: ThreadItem;
   isActive: boolean;
   isStale: boolean;
   onClick: () => void;
+  liveState: Doc<"threads">["liveState"];
 }) {
   const actions = useChatActions();
   const deleteThread = useMutation(
@@ -161,8 +198,9 @@ function ThreadItem({
       )}
       onClick={onClick}
     >
-      <div className="relative flex w-full items-center">
-        <div className="flex-1 min-w-0 px-2">
+      <div className="relative flex w-full items-center gap-2">
+        <LiveStateIndicator liveState={liveState} />
+        <div className="flex-1 min-w-0 pr-2">
           {thread.title ? (
             <div className="text-sm truncate">{thread.title}</div>
           ) : (

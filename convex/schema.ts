@@ -8,7 +8,8 @@ export const subscriptionTiers = v.union(
 
 export const aiModelProviders = v.union(
   v.literal("openai"),
-  v.literal("anthropic")
+  v.literal("anthropic"),
+  v.literal("google")
 );
 export const aiModels = v.string();
 
@@ -16,6 +17,14 @@ export const threadLifecycleStatuses = v.union(
   v.literal("active"),
   v.literal("archived"),
   v.literal("deleted")
+);
+
+export const threadLiveStates = v.union(
+  v.literal("pending"),
+  v.literal("streaming"),
+  v.literal("completed"),
+  v.literal("error"),
+  v.literal("cancelled")
 );
 
 export const messageLifecycleStatuses = v.union(
@@ -82,6 +91,7 @@ export default defineSchema({
     uuid: v.string(),
     title: v.optional(v.string()),
     status: threadLifecycleStatuses,
+    liveState: threadLiveStates,
     createdAt: v.number(),
     updatedAt: v.number(),
     messages: v.string(),

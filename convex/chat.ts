@@ -4,11 +4,13 @@ import { queryWithRLS, mutationWithRLS } from "./rls";
 import { INTERNAL_getCurrentUserOrThrow } from "./lib";
 import { paginationOptsValidator } from "convex/server";
 import { Doc } from "./_generated/dataModel";
+import { threadLiveStates } from "./schema";
 
 export const saveChat = mutationWithRLS({
   args: {
     uuid: v.string(),
     messages: v.string(),
+    liveState: v.optional(threadLiveStates),
   },
   handler: async (ctx, args) => {
     const thread = await ctx.db
@@ -21,6 +23,7 @@ export const saveChat = mutationWithRLS({
 
     await ctx.db.patch(thread._id, {
       messages: args.messages,
+      liveState: args.liveState,
     });
   },
 });
@@ -50,6 +53,7 @@ export const createChat = mutationWithRLS({
       updatedAt: now,
       userId: user._id,
       status: "active",
+      liveState: "pending",
     });
 
     const thread = await ctx.db.get(threadId);
@@ -58,6 +62,18 @@ export const createChat = mutationWithRLS({
     }
 
     return thread;
+  },
+});
+
+export const updateChatLiveState = mutationWithRLS({
+  args: {
+    id: v.id("threads"),
+    liveState: threadLiveStates,
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.id, {
+      liveState: args.liveState,
+    });
   },
 });
 
@@ -153,6 +169,7 @@ export const getUserThreadsForListing = queryWithRLS({
           updatedAt: thread.updatedAt,
           status: thread.status,
           userId: thread.userId,
+          liveState: thread.liveState,
         })
       ),
     };
