@@ -1,154 +1,25 @@
 "use client";
 
-import { useChat } from "@ai-sdk/react";
 import TmpChatInput from "./tmp-chat-input";
 import { BotIcon } from "lucide-react";
 import { ChatMessage } from "./chat-message";
-import { api } from "../../../convex/_generated/api";
-import { useColdCachedQuery } from "@/hooks/useColdCachedQuery";
-import { useEffect, useMemo } from "react";
-import { parseMessages } from "@/lib/parser";
-import { useChatState, useChatActions } from "@/providers/ChatStateProvider";
-import { insertAtTop, useMutation } from "convex/react";
-import { Id } from "../../../convex/_generated/dataModel";
-import superjson from "superjson";
-import { useAuth } from "@/hooks/useAuth";
+import { useEffect } from "react";
+import { useChatState } from "@/providers/ChatStateProvider";
+import {
+  useChatThreadActions,
+  useChatThreadState,
+} from "@/providers/ChatThreadProvider";
 
-export default function Chat() {
-  const { isAnonymous } = useAuth();
+export function Chat() {
   const { currentThreadId, isNewThread } = useChatState();
-  const actions = useChatActions();
 
-  const createThreadOptimistic = useMutation(
-    api.chat.createChat
-  ).withOptimisticUpdate((localStore, mutationArgs) => {
-    insertAtTop({
-      paginatedQuery: api.chat.getUserThreadsForListing,
-      argsToMatch: {}, // same args as in the sidebar
-      localQueryStore: localStore,
-      item: {
-        _id: crypto.randomUUID() as Id<"threads">,
-        uuid: mutationArgs.uuid,
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-        status: "active",
-        title: undefined,
-        userId: crypto.randomUUID() as Id<"users">,
-        _creationTime: Date.now(),
-      },
-    });
-  });
+  const { input, messages, isStale, isLoading } = useChatThreadState();
 
-  // fetch the current thread (only if we have an id (not on /chat))
-  const { data: currentThread, isStale } = useColdCachedQuery(
-    // const isStale = false;
-    // const currentThread = useQuery(
-    // const isStale = false;
-    // const currentThread = useHotCachedQuery(
-    api.chat.getChat,
-    currentThreadId && !isNewThread
-      ? {
-          uuid: currentThreadId,
-        }
-      : "skip"
-  ); // undefined = loading, null = no thread
-  const isLoading =
-    !isAnonymous && currentThreadId && currentThread === undefined;
-
-  // we need to parse the messages if we received a thread
-  const initialMessages = useMemo(() => {
-    try {
-      if (!currentThread) return undefined;
-      if (!currentThread.messages) return undefined;
-      return parseMessages(currentThread.messages);
-    } catch (e) {
-      console.error("error parsing messages !!!", e);
-      return undefined;
-    }
-  }, [currentThread]);
-
-  // we create the useChat instance but in case of no thread id it's simply not used
-  const {
-    input,
-    handleInputChange: chatHandleInputChange,
-    handleSubmit: chatHandleSubmit,
-    status,
-    messages,
-  } = useChat({
-    api: "/api/chat",
-    id: currentThreadId, // use the provided chat ID
-    initialMessages, // initial messages if provided
-    sendExtraMessageFields: true, // send id and createdAt for each message
-    // only send the last message to the server:
-    experimental_prepareRequestBody({ messages, id }) {
-      return { message: messages[messages.length - 1], id };
-    },
-
-    onFinish: (message) => {
-      console.log("🔍 Finished message:", message);
-    },
-
-    onError: (error) => {
-      console.error("🔍 useChat error:", error);
-    },
-
-    onResponse: async (response) => {
-      // Handle new thread creation
-      const threadId = response.headers.get("X-Thread-Id");
-      console.log("real threadId from server", threadId);
-    },
-  });
+  const { handleInputChange, handleSubmit } = useChatThreadActions();
 
   useEffect(() => {
-    console.log("chat debug", {
-      currentThreadId,
-      initialMessages,
-      currentThread,
-      isLoading,
-      isAnonymous,
-      isNewThread,
-      status,
-    });
-  }, [
-    currentThreadId,
-    isLoading,
-    isNewThread,
-    initialMessages,
-    currentThread,
-    isAnonymous,
-    status,
-  ]);
-
-  // TODO: find fix. Cool but, when we are submitting a new chat, right after submit, isNewThread is false, but currentThread is undefined.
-  // => fixed by adding status !== "submitted" but might be a bit hacky.
-  useEffect(() => {
-    if (
-      !isNewThread &&
-      !isLoading &&
-      !currentThread &&
-      status !== "submitted"
-    ) {
-      console.warn("THREAD NOT FOUND", currentThreadId);
-      actions.openNewChat();
-    }
-  }, [isNewThread, isLoading, currentThread, currentThreadId, actions, status]);
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    actions.handleInputChange();
-    chatHandleInputChange(e); // update the chat
-  };
-
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    actions.handleSubmit();
-    if (currentThreadId && isNewThread) {
-      createThreadOptimistic({
-        uuid: currentThreadId,
-        messages: superjson.stringify(messages),
-      });
-    }
-    chatHandleSubmit(e);
-  };
+    console.log("------------- messages", messages);
+  }, [messages]);
 
   // simplified rendering code, extend as needed:
   return (
@@ -156,8 +27,7 @@ export default function Chat() {
       <div className="max-w-3xl mx-auto space-y-5 p-4">
         <div className="aria-hidden h-10"></div>
         <div className="text-sm text-muted-foreground">
-          {currentThreadId ?? "null"} {messages.length}{" "}
-          {initialMessages?.length}
+          {currentThreadId ?? "null"} {messages.length} {messages?.length}
         </div>
 
         {isNewThread ? (
@@ -185,7 +55,7 @@ export default function Chat() {
         input={input}
         onChange={handleInputChange}
         onSubmit={handleSubmit}
-        disabled={currentThread === undefined}
+        disabled={isLoading}
       />
     </div>
   );

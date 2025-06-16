@@ -53,6 +53,7 @@
     "convex-helpers": "^0.1.92",
     "date-fns": "^4.1.0",
     "embla-carousel-react": "^8.6.0",
+    "fast-deep-equal": "^3.1.3",
     "input-otp": "^1.4.2",
     "lucide-react": "^0.513.0",
     "next": "15.4.0-canary.71",
@@ -68,6 +69,7 @@
     "superjson": "^2.2.2",
     "tailwind-merge": "^3.3.0",
     "tailwindcss": "^4.1.8",
+    "usehooks-ts": "^3.1.1",
     "vaul": "^1.1.2",
     "zod": "^3.25.56"
   },

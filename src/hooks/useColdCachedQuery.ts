@@ -215,11 +215,15 @@ export function useColdCachedQuery<Query extends FunctionReference<"query">>(
 
     if (remoteData === null) {
       console.log("DEBUG: delete from cache", {
+        queryName: queryNameString,
+        queryArgs,
         cacheKey,
       });
       deleteCache(cacheKey);
     } else {
-      console.log("11DEBUG: set to cache", {
+      console.log("------- DEBUG: SET to cache", {
+        queryName: queryNameString,
+        queryArgs,
         cacheKey,
         data: remoteData,
       });

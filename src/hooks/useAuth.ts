@@ -3,7 +3,7 @@ import { useConvexAuth, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useAuth as useClerkAuth, useUser } from "@clerk/nextjs";
 import { useLocalCache } from "@/providers/LocalCacheProvider";
-import { useChatActions } from "@/providers/ChatStateProvider";
+// import { useChatActions } from "@/providers/ChatStateProvider";
 
 export type ClerkUser = ReturnType<typeof useUser>["user"];
 
@@ -60,13 +60,13 @@ function useAuth_INTERNAL() {
   // Clean up state on sign out
   const { signOut: clerkSignOut } = useClerkAuth();
   const { clear: clearLocalCache } = useLocalCache();
-  const { clear: clearChatState } = useChatActions();
+  // const { clear: clearChatState } = useChatActions(); // TODO: circular dependency but maybe no longer needed
 
   const signOut = async (...args: Parameters<typeof clerkSignOut>) => {
     const [callback, options] = args;
     const wrappedCallback = () => {
       setIsUserEnsured(false);
-      clearChatState();
+      // clearChatState(); // TODO: circular dependency but maybe no longer needed
       callback?.();
       clearLocalCache();
     };
