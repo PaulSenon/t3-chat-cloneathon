@@ -65,7 +65,10 @@ export function ChatStateProvider({ children }: { children: ReactNode }) {
   ); // undefined = loading, null = no thread
 
   const isLoading =
-    !isAnonymous && !!state.currentThreadId && currentThread === undefined;
+    !isAnonymous &&
+    !!state.currentThreadId &&
+    currentThread === undefined &&
+    !state.isNewThread;
 
   useEffect(() => {
     if (!state.currentThreadId) {

@@ -18,6 +18,7 @@ import {
   optimisticallyUpdateValueInPaginatedQuery,
 } from "convex/react";
 import superjson from "superjson";
+import { useScrollToBottom } from "@/hooks/use-scroll-to-bottom";
 
 interface ChatThreadActions {
   handleInputChange: UseChatHelpers["handleInputChange"];
@@ -116,6 +117,15 @@ export function ChatThreadProvider({
       console.log("real threadId from server", threadId);
     },
   });
+
+  const { containerRef, endRef, isAtBottom, scrollToBottom } =
+    useScrollToBottom();
+
+  useEffect(() => {
+    console.log("currentThread", currentThread);
+
+    scrollToBottom("instant");
+  }, [currentThread, scrollToBottom]);
 
   // TODO: find fix. Cool but, when we are submitting a new chat, right after submit, isNewThread is false, but currentThread is undefined.
   // => fixed by adding status !== "submitted" but might be a bit hacky.

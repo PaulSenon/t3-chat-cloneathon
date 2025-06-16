@@ -9,21 +9,29 @@ import {
   useChatThreadActions,
   useChatThreadState,
 } from "@/providers/ChatThreadProvider";
+import { useScrollToBottom } from "@/hooks/use-scroll-to-bottom";
 
 export function Chat() {
   const { currentThreadId, isNewThread } = useChatState();
-
-  const { input, messages, isStale, isLoading } = useChatThreadState();
-
+  const { input, messages, isStale, isLoading, status } = useChatThreadState();
   const { handleInputChange, handleSubmit } = useChatThreadActions();
 
-  useEffect(() => {
-    console.log("------------- messages", messages);
-  }, [messages]);
+  const { containerRef, endRef, isAtBottom, scrollToBottom } =
+    useScrollToBottom();
+
+  // Scroll to bottom when a new thread is loaded/stale
+  // useEffect(() => {
+  //   if (isStale) {
+  //     scrollToBottom("instant");
+  //   }
+  // }, [isStale, scrollToBottom]);
 
   // simplified rendering code, extend as needed:
   return (
-    <div className="h-screen w-full overflow-y-scroll overscroll-contain">
+    <div
+      ref={containerRef}
+      className="h-screen w-full overflow-y-scroll overscroll-contain"
+    >
       <div className="max-w-3xl mx-auto space-y-5 p-4">
         <div className="aria-hidden h-10"></div>
         <div className="text-sm text-muted-foreground">
@@ -32,7 +40,7 @@ export function Chat() {
 
         {isNewThread ? (
           <NewChatPlaceholder />
-        ) : isLoading ? (
+        ) : isLoading && messages.length === 0 ? (
           <LoadingChatPlaceholder />
         ) : (
           messages.map((message) => (
@@ -48,14 +56,20 @@ export function Chat() {
             />
           ))
         )}
-        <div className="aria-hidden h-40"></div>
+        <div ref={endRef} className="aria-hidden h-40"></div>
       </div>
 
       <TmpChatInput
         input={input}
         onChange={handleInputChange}
-        onSubmit={handleSubmit}
-        disabled={isLoading}
+        onSubmit={(e) => {
+          handleSubmit(e);
+          scrollToBottom("smooth");
+        }}
+        isLoading={isLoading}
+        showScrollToBottom={!isAtBottom}
+        onScrollToBottomClick={() => scrollToBottom("smooth")}
+        isStreaming={status === "streaming" || status === "submitted"}
       />
     </div>
   );
