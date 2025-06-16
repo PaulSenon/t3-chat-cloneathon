@@ -12,7 +12,11 @@ import { useColdCachedQuery } from "@/hooks/useColdCachedQuery";
 import { api } from "../../convex/_generated/api";
 import { useAuth } from "@/hooks/useAuth";
 import { Doc, Id } from "../../convex/_generated/dataModel";
-import { insertAtTop, useMutation } from "convex/react";
+import {
+  insertAtTop,
+  useMutation,
+  optimisticallyUpdateValueInPaginatedQuery,
+} from "convex/react";
 import superjson from "superjson";
 
 interface ChatThreadActions {
@@ -152,6 +156,24 @@ export function ChatThreadProvider({
       },
     });
   });
+  const updateThreadOptimistic = useMutation(
+    api.chat.updateChatLiveState
+  ).withOptimisticUpdate((localStore, mutationArgs) => {
+    optimisticallyUpdateValueInPaginatedQuery(
+      localStore,
+      api.chat.getUserThreadsForListing,
+      {},
+      (currentValue) => {
+        if (mutationArgs.id === currentValue._id) {
+          return {
+            ...currentValue,
+            liveState: mutationArgs.liveState,
+          };
+        }
+        return currentValue;
+      }
+    );
+  });
   const handleSubmit: UseChatHelpers["handleSubmit"] = (e) => {
     e?.preventDefault?.();
     actions.handleSubmit();
@@ -159,6 +181,11 @@ export function ChatThreadProvider({
       createThreadOptimistic({
         uuid: currentThreadId,
         messages: superjson.stringify(messages),
+      });
+    } else if (currentThread) {
+      updateThreadOptimistic({
+        id: currentThread?._id,
+        liveState: "pending",
       });
     }
     chatHandleSubmit(e);
