@@ -14,7 +14,12 @@ import { api } from "../../convex/_generated/api";
 import { useColdCachedQuery } from "@/hooks/useColdCachedQuery";
 import { useAuth } from "@/hooks/useAuth";
 import { Doc } from "../../convex/_generated/dataModel";
-import { defaultModelId, Model, modelsConfig } from "@/types/aiModels";
+import {
+  defaultModelId,
+  getModelById,
+  Model,
+  modelsConfig,
+} from "@/types/aiModels";
 
 interface ChatState {
   currentThreadId: string | undefined;
@@ -23,6 +28,7 @@ interface ChatState {
   currentThread: Doc<"threads"> | null | undefined;
   isStale: boolean;
   isLoading: boolean;
+  hasSubmittedSinceCurrentThreadLoaded: boolean;
 }
 
 interface ChatContextValue {
@@ -47,11 +53,18 @@ export function ChatStateProvider({ children }: { children: ReactNode }) {
   const threadIdFromUrl = id?.[0];
 
   const [state, setState] = useState<
-    Pick<ChatState, "currentThreadId" | "isNewThread" | "selectedModel">
+    Pick<
+      ChatState,
+      | "currentThreadId"
+      | "isNewThread"
+      | "selectedModel"
+      | "hasSubmittedSinceCurrentThreadLoaded"
+    >
   >({
     currentThreadId: threadIdFromUrl,
     isNewThread: threadIdFromUrl === undefined,
-    selectedModel: undefined,
+    selectedModel: getModelById(defaultModelId),
+    hasSubmittedSinceCurrentThreadLoaded: false,
   });
 
   const { setOpenMobile } = useSidebar();
@@ -89,7 +102,7 @@ export function ChatStateProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!currentThread) return;
     const modelId = currentThread.lastUsedModelId ?? defaultModelId;
-    const model = modelsConfig.find((model) => model.id === modelId);
+    const model = getModelById(modelId);
     if (!model) return;
     setState((prev) => ({
       ...prev,
@@ -106,17 +119,18 @@ export function ChatStateProvider({ children }: { children: ReactNode }) {
     handleSubmit: () => {
       console.log("🚀 Submit for chat:", state.currentThreadId);
 
-      // If on /chat (no thread ID), redirect to /chat/chatId and set currentThreadId
       if (state.isNewThread) {
-        setState((prev) => ({
-          ...prev,
-          isNewThread: false,
-        }));
+        // If on /chat (no thread ID), redirect to /chat/chatId and set currentThreadId
         window.history.pushState(null, "", `/chat/${state.currentThreadId}`);
         // router.replace(`/chat/${state.currentThreadId}`);
+        // If on /chat/id, do nothing (already have thread ID)
       }
 
-      // If on /chat/id, do nothing (already have thread ID)
+      setState((prev) => ({
+        ...prev,
+        hasSubmittedSinceCurrentThreadLoaded: true,
+        isNewThread: false,
+      }));
     },
 
     openChat: (threadId: string) => {
@@ -163,7 +177,7 @@ export function ChatStateProvider({ children }: { children: ReactNode }) {
       window.history.pushState(null, "", "/chat");
     },
     setSelectedModel: (modelId: string) => {
-      const model = modelsConfig.find((model) => model.id === modelId);
+      const model = getModelById(modelId);
       if (!model) return;
       setState((prev) => ({
         ...prev,
@@ -180,6 +194,8 @@ export function ChatStateProvider({ children }: { children: ReactNode }) {
       currentThread,
       isStale,
       isLoading,
+      hasSubmittedSinceCurrentThreadLoaded:
+        state.hasSubmittedSinceCurrentThreadLoaded,
     },
     actions,
   };

@@ -8,14 +8,59 @@ import {
   useChatThreadActions,
   useChatThreadState,
 } from "@/providers/ChatThreadProvider";
+import { cn } from "@/lib/utils";
+import { UIMessage } from "ai";
 // import { useScrollToBottom } from "@/hooks/use-scroll-to-bottom";
 
+export type OptimisticMessage = UIMessage & {
+  isOptimistic?: true;
+};
+
+const createOptimisticStepStartMessage = (): OptimisticMessage => ({
+  id: Date.now().toString(),
+  role: "assistant",
+  parts: [
+    {
+      type: "step-start",
+    },
+  ],
+  createdAt: new Date(),
+  isOptimistic: true,
+  content: "",
+});
+
 export function Chat() {
-  const { currentThreadId, isNewThread, selectedModel } = useChatState();
+  const {
+    currentThreadId,
+    isNewThread,
+    selectedModel,
+    hasSubmittedSinceCurrentThreadLoaded,
+  } = useChatState();
   const { setSelectedModel } = useChatActions();
-  const { input, messages, isStale, isLoading, status } = useChatThreadState();
+  const {
+    input,
+    messages,
+    isStale,
+    isLoading: isLoadingThreadData,
+    status,
+  } = useChatThreadState();
   const { handleInputChange, handleSubmit } = useChatThreadActions();
 
+  const isWaitingForFirstToken =
+    status === "submitted" &&
+    messages.length > 0 &&
+    messages[messages.length - 1].role === "user";
+
+  const isStreaming = status === "streaming";
+  const isStreamingOptimistic = isWaitingForFirstToken || isStreaming;
+
+  // TODO: ui should be in "loading" state upt to first part that is not a step-start
+  // const isWaitingForFirstMeaningfulToken =
+  //   isWaitingForFirstToken || isStreaming;
+
+  const optimisticMessages: OptimisticMessage[] = isWaitingForFirstToken
+    ? [...messages, createOptimisticStepStartMessage()]
+    : messages;
   // const {
   //   containerRef,
   //   endRef,
@@ -90,22 +135,38 @@ export function Chat() {
 
         {isNewThread ? (
           <NewChatPlaceholder />
-        ) : isLoading && messages.length === 0 ? (
+        ) : isLoadingThreadData && messages.length === 0 ? (
           <LoadingChatPlaceholder />
         ) : (
-          messages.map((message) => (
-            <div key={message.id} data-message-role={message.role}>
-              <ChatMessage
-                isStale={isStale}
-                message={{
-                  id: message.id,
-                  content: message.content,
-                  role: message.role as "user" | "assistant",
-                  timestamp: message.createdAt,
-                }}
-              />
-            </div>
-          ))
+          <>
+            {optimisticMessages.map((message, index) => {
+              const isLastAssistantMessage =
+                index === optimisticMessages.length - 1 &&
+                message.role === "assistant";
+
+              const isMessageLoading =
+                isLastAssistantMessage && isStreamingOptimistic;
+
+              return (
+                <div
+                  key={message.id}
+                  data-message-role={message.role}
+                  className={cn(
+                    message.role === "assistant" &&
+                      hasSubmittedSinceCurrentThreadLoaded &&
+                      "nth-last-2:min-h-[calc(100vh-20rem)]"
+                  )}
+                >
+                  <ChatMessage
+                    isStale={isStale}
+                    message={message}
+                    isOptimistic={!!message.isOptimistic}
+                    isLoading={isMessageLoading}
+                  />
+                </div>
+              );
+            })}
+          </>
         )}
         <div className="aria-hidden h-40"></div>
       </div>
@@ -119,7 +180,7 @@ export function Chat() {
         }}
         selectedModel={selectedModel}
         setSelectedModel={setSelectedModel}
-        isLoading={isLoading}
+        isLoading={isLoadingThreadData}
         showScrollToBottom={true}
         onScrollToBottomClick={() => {}}
         isStreaming={status === "streaming" || status === "submitted"}

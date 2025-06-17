@@ -127,6 +127,7 @@ export default function TmpChatInput({
                       models={modelsConfig}
                       selectedModel={selectedModel}
                       setSelectedModel={setSelectedModel}
+                      isLoading={isLoading}
                       disabled={isLoading}
                     />
                     <ModelOptionSearchPure />
@@ -364,6 +365,7 @@ const ModelSelectorPure = ({
   setSelectedModel,
   disabled,
   isPremiumUser,
+  isLoading,
 }: {
   // TODO: plug with global typed model config
   models: Model[];
@@ -371,6 +373,7 @@ const ModelSelectorPure = ({
   setSelectedModel: (modelId: string) => void;
   disabled: boolean;
   isPremiumUser: boolean;
+  isLoading: boolean;
 }) => {
   const premiumModels = models.filter((model) => model.isPremium);
   const freeModels = models.filter((model) => !model.isPremium);
@@ -386,12 +389,12 @@ const ModelSelectorPure = ({
             disabled && "opacity-50 cursor-not-allowed"
           )}
         >
-          {selectedModel ? (
+          {isLoading || !selectedModel ? (
+            <Skeleton className="h-4 w-20" />
+          ) : (
             <div className="text-left text-sm font-medium">
               {selectedModel.name}
             </div>
-          ) : (
-            <Skeleton className="h-4 w-20" />
           )}
           <ChevronDownIcon className="right-0 size-4" />
         </Button>

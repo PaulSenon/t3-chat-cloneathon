@@ -1,7 +1,12 @@
-import { createAnthropic } from "@ai-sdk/anthropic";
+import { AnthropicProviderOptions, createAnthropic } from "@ai-sdk/anthropic";
 import { createOpenAI } from "@ai-sdk/openai";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
-import { createProviderRegistry, customProvider } from "ai";
+import {
+  createProviderRegistry,
+  customProvider,
+  defaultSettingsMiddleware,
+  wrapLanguageModel,
+} from "ai";
 import { LanguageModelV1, ProviderV1 } from "@ai-sdk/provider";
 import { env } from "@/env";
 
@@ -200,24 +205,25 @@ export const registry = createProviderRegistry({
   // register provider with prefix and default setup:
   anthropic: customProvider({
     languageModels: {
-      "claude-4-sonnet": anthropic("claude-4-sonnet-20250514"),
-      // https://ai-sdk.dev/docs/ai-sdk-core/provider-management
-      // reasoning: wrapLanguageModel({
-      //   model: anthropic("claude-3-7-sonnet-20250219"),
-      //   middleware: defaultSettingsMiddleware({
-      //     settings: {
-      //       maxTokens: 100000, // example default setting
-      //       providerMetadata: {
-      //         anthropic: {
-      //           thinking: {
-      //             type: "enabled",
-      //             budgetTokens: 32000,
-      //           },
-      //         } satisfies AnthropicProviderOptions,
-      //       },
-      //     },
-      //   }),
-      // }),
+      //anthropic("claude-4-sonnet-20250514"),
+      "claude-4-sonnet":
+        // https://ai-sdk.dev/docs/ai-sdk-core/provider-management
+        wrapLanguageModel({
+          model: anthropic("claude-4-sonnet-20250514"),
+          middleware: defaultSettingsMiddleware({
+            settings: {
+              maxTokens: 10000, // example default setting
+              providerMetadata: {
+                anthropic: {
+                  thinking: {
+                    type: "enabled",
+                    budgetTokens: 32000,
+                  },
+                } satisfies AnthropicProviderOptions,
+              },
+            },
+          }),
+        }),
       // "claude-4-opus": anthropic("claude-4-opus-20250514"),
     },
   }),

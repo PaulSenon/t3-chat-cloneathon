@@ -4,13 +4,15 @@ import React, { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Copy, Check, SquarePen, RefreshCcw } from "lucide-react";
-import { Message } from "@/types/chat";
+import { UIMessage } from "ai";
 
 interface ChatMessageProps {
-  message: Message;
+  message: UIMessage;
   onRetry?: () => void;
   onEdit?: () => void;
   isStale: boolean;
+  isOptimistic: boolean;
+  isLoading: boolean;
 }
 
 /**
@@ -21,6 +23,8 @@ export const ChatMessage = React.memo(function ChatMessage({
   onRetry,
   onEdit,
   isStale,
+  isOptimistic,
+  isLoading,
 }: ChatMessageProps) {
   const [copied, setCopied] = useState(false);
   const isUser = message.role === "user";
@@ -67,9 +71,58 @@ export const ChatMessage = React.memo(function ChatMessage({
         </span>
 
         <div className="flex flex-col gap-3">
-          <div className="prose prose-pink max-w-none dark:prose-invert prose-pre:m-0 prose-pre:bg-transparent prose-pre:p-0">
-            <p className="whitespace-pre-wrap text-sm">{message.content}</p>
-          </div>
+          {message.parts.map((part, i) => {
+            console.log(part.type, part);
+            switch (part.type) {
+              case "text":
+                return (
+                  <div
+                    key={i}
+                    className="prose prose-pink max-w-none dark:prose-invert prose-pre:m-0 prose-pre:bg-transparent prose-pre:p-0"
+                  >
+                    <p className="whitespace-pre-wrap text-sm">
+                      {message.content}
+                    </p>
+                  </div>
+                );
+              case "step-start":
+                return isOptimistic && <AssistantLoading key={i} />;
+              case "source":
+                const { sourceType, url, title } = part.source;
+                return (
+                  sourceType === "url" && (
+                    <div key={i}>
+                      <a href={url} target="_blank" rel="noopener noreferrer">
+                        {title}
+                      </a>
+                    </div>
+                  )
+                );
+              case "reasoning":
+                return (
+                  <div key={i}>
+                    {isLoading ? "REASONING..." : part.reasoning}
+                  </div>
+                );
+              case "tool-invocation":
+                const { toolName, state: toolState } = part.toolInvocation;
+                return (
+                  <div key={i}>
+                    {toolName}
+                    {toolState === "call"
+                      ? "TOOL INVOCATION"
+                      : toolState === "partial-call"
+                        ? "TOOL PARTIAL CALL"
+                        : toolState === "result"
+                          ? "TOOL RESULT"
+                          : "TOOL ERROR"}
+                  </div>
+                );
+
+              // case "file":
+              //   return <div key={i}>FILE</div>;
+            }
+          })}
         </div>
 
         {/* Action buttons - only show on hover */}
@@ -126,3 +179,29 @@ export const ChatMessage = React.memo(function ChatMessage({
     </div>
   );
 });
+
+const AssistantLoading = ({ className }: { className?: string }) => {
+  return (
+    <div className={cn("flex", className)}>
+      <div
+        role="article"
+        aria-label="Assistant is thinking..."
+        className={cn(
+          "group relative inline-block max-w-[80%] break-words rounded-xl px-4 py-3 text-left transition-discrete duration-250",
+          "bg-transparent"
+        )}
+      >
+        <div className="flex items-center gap-1">
+          <div className="flex items-center space-x-1">
+            <div className="w-2 h-2 bg-muted-foreground/60 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+            <div className="w-2 h-2 bg-muted-foreground/60 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+            <div className="w-2 h-2 bg-muted-foreground/60 rounded-full animate-bounce"></div>
+          </div>
+          {/* <span className="ml-2 text-sm text-muted-foreground/80">
+            Thinking...
+          </span> */}
+        </div>
+      </div>
+    </div>
+  );
+};
