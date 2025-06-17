@@ -14,9 +14,11 @@ import { api } from "../../convex/_generated/api";
 import { useColdCachedQuery } from "@/hooks/useColdCachedQuery";
 import { useAuth } from "@/hooks/useAuth";
 import { Doc } from "../../convex/_generated/dataModel";
+import { defaultModelId, Model, modelsConfig } from "@/types/aiModels";
 
 interface ChatState {
   currentThreadId: string | undefined;
+  selectedModel: Model | undefined;
   isNewThread: boolean;
   currentThread: Doc<"threads"> | null | undefined;
   isStale: boolean;
@@ -32,6 +34,7 @@ interface ChatContextValue {
     openNewChat: () => void;
     clear: () => void;
     deleteChat: (threadId: string) => void;
+    setSelectedModel: (modelId: string) => void;
   };
 }
 
@@ -43,9 +46,12 @@ export function ChatStateProvider({ children }: { children: ReactNode }) {
   // const router = useRouter();
   const threadIdFromUrl = id?.[0];
 
-  const [state, setState] = useState({
+  const [state, setState] = useState<
+    Pick<ChatState, "currentThreadId" | "isNewThread" | "selectedModel">
+  >({
     currentThreadId: threadIdFromUrl,
     isNewThread: threadIdFromUrl === undefined,
+    selectedModel: undefined,
   });
 
   const { setOpenMobile } = useSidebar();
@@ -79,6 +85,17 @@ export function ChatStateProvider({ children }: { children: ReactNode }) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!currentThread) return;
+    const modelId = currentThread.lastUsedModelId ?? defaultModelId;
+    const model = modelsConfig.find((model) => model.id === modelId);
+    if (!model) return;
+    setState((prev) => ({
+      ...prev,
+      selectedModel: model,
+    }));
+  }, [currentThread]);
 
   const actions = {
     handleInputChange: () => {
@@ -145,12 +162,21 @@ export function ChatStateProvider({ children }: { children: ReactNode }) {
       // router.push("/chat");
       window.history.pushState(null, "", "/chat");
     },
+    setSelectedModel: (modelId: string) => {
+      const model = modelsConfig.find((model) => model.id === modelId);
+      if (!model) return;
+      setState((prev) => ({
+        ...prev,
+        selectedModel: model,
+      }));
+    },
   };
 
   const value: ChatContextValue = {
     state: {
       currentThreadId: state.currentThreadId,
       isNewThread: state.isNewThread,
+      selectedModel: state.selectedModel,
       currentThread,
       isStale,
       isLoading,

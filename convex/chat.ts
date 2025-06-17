@@ -97,6 +97,32 @@ export const setChatTitle = mutationWithRLS({
   },
 });
 
+export const setChatLastUsedModel = mutationWithRLS({
+  args: {
+    id: v.id("threads"),
+    lastUsedModelId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.id, {
+      lastUsedModelId: args.lastUsedModelId,
+    });
+  },
+});
+
+export const patchChat = mutationWithRLS({
+  args: {
+    id: v.id("threads"),
+    lastUsedModelId: v.optional(v.string()),
+    liveState: v.optional(threadLiveStates),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.id, {
+      lastUsedModelId: args.lastUsedModelId,
+      liveState: args.liveState,
+    });
+  },
+});
+
 export const deleteChat = mutationWithRLS({
   args: {
     uuid: v.string(),

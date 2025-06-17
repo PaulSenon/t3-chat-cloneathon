@@ -18,8 +18,8 @@ import {
   optimisticallyUpdateValueInPaginatedQuery,
 } from "convex/react";
 import superjson from "superjson";
-import { useScrollToBottom } from "@/hooks/use-scroll-to-bottom";
-
+import { defaultModelId, Model } from "@/types/aiModels";
+import { ChatBody } from "@/app/api/chat/route";
 interface ChatThreadActions {
   handleInputChange: UseChatHelpers["handleInputChange"];
   handleSubmit: UseChatHelpers["handleSubmit"];
@@ -47,6 +47,7 @@ export function ChatThreadProvider({
   currentThread,
   isStale,
   isLoading,
+  selectedModel,
 }: {
   children: ReactNode;
   currentThreadId: string | undefined;
@@ -54,6 +55,7 @@ export function ChatThreadProvider({
   currentThread: Doc<"threads"> | null | undefined;
   isStale: boolean;
   isLoading: boolean;
+  selectedModel?: Model;
 }) {
   // const { isAnonymous } = useAuth();
   const actions = useChatActions();
@@ -99,16 +101,31 @@ export function ChatThreadProvider({
     initialMessages, // initial messages if provided
     sendExtraMessageFields: true, // send id and createdAt for each message
     // only send the last message to the server:
-    experimental_prepareRequestBody({ messages, id }) {
-      return { message: messages[messages.length - 1], id };
-    },
+    // experimental_prepareRequestBody({ messages, id }) {
+    //   return { message: messages[messages.length - 1], id };
+    // },
+    experimental_prepareRequestBody: ({ messages, id }) =>
+      ({
+        id,
+        message: messages.at(-1),
+        selectedModelId: selectedModel?.id ?? defaultModelId,
+      }) satisfies ChatBody,
 
     onFinish: (message) => {
       console.log("🔍 Finished message:", message);
     },
 
     onError: (error) => {
-      console.error("🔍 useChat error:", error);
+      console.error("🔍 useChat error:", {
+        error,
+        status,
+        messages,
+        input,
+        selectedModel,
+      });
+
+      // TODO: UI feedback
+      // TODO: restore input value
     },
 
     onResponse: async (response) => {
@@ -118,14 +135,9 @@ export function ChatThreadProvider({
     },
   });
 
-  const { containerRef, endRef, isAtBottom, scrollToBottom } =
-    useScrollToBottom();
-
   useEffect(() => {
     console.log("currentThread", currentThread);
-
-    scrollToBottom("instant");
-  }, [currentThread, scrollToBottom]);
+  }, [currentThread]);
 
   // TODO: find fix. Cool but, when we are submitting a new chat, right after submit, isNewThread is false, but currentThread is undefined.
   // => fixed by adding status !== "submitted" but might be a bit hacky.
@@ -162,12 +174,13 @@ export function ChatThreadProvider({
         liveState: "pending",
         title: undefined,
         userId: crypto.randomUUID() as Id<"users">,
+        lastUsedModelId: selectedModel?.id ?? defaultModelId,
         _creationTime: Date.now(),
       },
     });
   });
   const updateThreadOptimistic = useMutation(
-    api.chat.updateChatLiveState
+    api.chat.patchChat
   ).withOptimisticUpdate((localStore, mutationArgs) => {
     optimisticallyUpdateValueInPaginatedQuery(
       localStore,
@@ -177,7 +190,9 @@ export function ChatThreadProvider({
         if (mutationArgs.id === currentValue._id) {
           return {
             ...currentValue,
-            liveState: mutationArgs.liveState,
+            liveState: mutationArgs.liveState ?? currentValue.liveState,
+            lastUsedModelId:
+              mutationArgs.lastUsedModelId ?? currentValue.lastUsedModelId,
           };
         }
         return currentValue;
@@ -196,6 +211,7 @@ export function ChatThreadProvider({
       updateThreadOptimistic({
         id: currentThread?._id,
         liveState: "pending",
+        lastUsedModelId: selectedModel?.id ?? defaultModelId,
       });
     }
     chatHandleSubmit(e);

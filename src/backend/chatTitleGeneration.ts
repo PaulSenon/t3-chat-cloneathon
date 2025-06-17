@@ -15,7 +15,7 @@ export async function generateChatTitle(messages: Message[]) {
       Conversation Title:
       `
   );
-  const model = registry.languageModel("google:fast");
+  const model = registry.languageModel("google:gemini-2.0-flash-lite");
   const result = await generateObject({
     model,
     schema: z.object({

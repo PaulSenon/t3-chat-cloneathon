@@ -3,6 +3,7 @@ import {
   appendResponseMessages,
   appendClientMessage,
   Message,
+  UIMessage,
 } from "ai";
 import { auth } from "@clerk/nextjs/server";
 import { fetchMutation, fetchQuery } from "convex/nextjs";
@@ -10,8 +11,21 @@ import { api } from "../../../../convex/_generated/api";
 import superjson from "superjson";
 import { registry } from "@/backend/aiProviderRegistry";
 import { generateChatTitle } from "@/backend/chatTitleGeneration";
+import z from "zod";
+import { modelsConfig } from "@/types/aiModels";
 
 export const maxDuration = 30;
+
+const bodySchema = z.object({
+  message: z
+    .any()
+    .optional()
+    .transform((val) => val as UIMessage | undefined), // TODO: validate the message
+  id: z.string(),
+  selectedModelId: z.string(),
+});
+
+export type ChatBody = z.infer<typeof bodySchema>;
 
 export async function POST(req: Request) {
   // 1. Authentication
@@ -22,11 +36,31 @@ export async function POST(req: Request) {
     return new Response("Not authenticated", { status: 401 });
   }
   console.log("✅ User authenticated:", userId);
+  const user = await fetchQuery(api.users.getCurrentUser, undefined, { token });
+  if (!user) {
+    return new Response("Not authenticated", { status: 401 });
+  }
 
   // 2. Parse request - expect AI SDK format with custom body data
   // get the last message from the client:
   const body = await req.json();
-  const { message, id } = body;
+  const { message, id, selectedModelId } = bodySchema.parse(body);
+
+  if (!message) {
+    return new Response("No message provided", { status: 400 });
+  }
+
+  const model = modelsConfig.find((model) => model.id === selectedModelId);
+  if (!model) {
+    return new Response("Model not found", { status: 404 });
+  }
+
+  if (user.tier !== "premium-level-1" && model.isPremium) {
+    return new Response("User on free tier cannot use premium model", {
+      status: 403,
+    });
+  }
+
   console.log("🔍 Received message:", message.id);
 
   // load the previous messages from the server or create a new thread:
@@ -56,8 +90,20 @@ export async function POST(req: Request) {
   //   ));
 
   if (!thread) {
-    throw new Error("Failed to create or get thread");
+    return new Response("Failed to create or get thread", { status: 500 });
   }
+
+  const deferredPromises: Promise<unknown>[] = [];
+  deferredPromises.push(
+    fetchMutation(
+      api.chat.setChatLastUsedModel,
+      {
+        id: thread._id,
+        lastUsedModelId: selectedModelId,
+      },
+      { token }
+    )
+  );
 
   const pastMessages: Message[] = thread.messages
     ? superjson.parse(thread.messages)
@@ -77,7 +123,8 @@ export async function POST(req: Request) {
   }
 
   const result = streamText({
-    model: registry.languageModel("openai:fast"),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    model: registry.languageModel(model.id as any), // TODO: fix when fully typed
     messages,
     async onFinish({ response }) {
       // console.log("🔍 Response:", JSON.stringify(response, null, 2));
@@ -120,6 +167,10 @@ export async function POST(req: Request) {
     },
     { token }
   );
+
+  await Promise.all(deferredPromises).catch((error) => {
+    console.error("🔴 Error in deferred promises:", error);
+  });
 
   // 6. Return streaming response with thread ID in headers
   return result.toDataStreamResponse({

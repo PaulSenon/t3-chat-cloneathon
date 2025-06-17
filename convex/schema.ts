@@ -13,6 +13,18 @@ export const aiModelProviders = v.union(
 );
 export const aiModels = v.string();
 
+export const aiModelCapabilities = v.union(
+  v.literal("text"),
+  v.literal("vision"),
+  v.literal("web"),
+  v.literal("reasoning")
+);
+
+export const aiModelPricing = v.object({
+  permMillionInputTokens: v.number(),
+  permMillionOutputTokens: v.number(),
+});
+
 export const threadLifecycleStatuses = v.union(
   v.literal("active"),
   v.literal("archived"),
@@ -95,6 +107,7 @@ export default defineSchema({
     createdAt: v.number(),
     updatedAt: v.number(),
     messages: v.string(),
+    lastUsedModelId: v.optional(v.string()),
 
     // AI SDK v4: Enhanced metadata for thread management
     metadata: v.optional(
@@ -113,6 +126,16 @@ export default defineSchema({
     .index("byUserIdUpdatedAt", ["userId", "updatedAt"])
     .index("byUuid", ["uuid"]),
   // .index("byWorkspaceIdUpdatedAt", ["workspaceId", "updatedAt"]) // for future workspace feature (outside of MVP scope)
+
+  // aiModels: defineTable({
+  //   name: v.string(),
+  //   provider: aiModelProviders,
+  //   capabilities: v.array(aiModelCapabilities),
+  //   available: v.boolean(),
+  //   pricing: v.optional(aiModelPricing),
+  //   createdAt: v.number(),
+  //   updatedAt: v.number(),
+  // }),
 
   // TODO: outside of MVP scope
   // workspaces: defineTable({

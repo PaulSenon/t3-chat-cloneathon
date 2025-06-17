@@ -3,33 +3,83 @@
 import TmpChatInput from "./tmp-chat-input";
 import { BotIcon } from "lucide-react";
 import { ChatMessage } from "./chat-message";
-import { useEffect } from "react";
-import { useChatState } from "@/providers/ChatStateProvider";
+import { useChatActions, useChatState } from "@/providers/ChatStateProvider";
 import {
   useChatThreadActions,
   useChatThreadState,
 } from "@/providers/ChatThreadProvider";
-import { useScrollToBottom } from "@/hooks/use-scroll-to-bottom";
+// import { useScrollToBottom } from "@/hooks/use-scroll-to-bottom";
 
 export function Chat() {
-  const { currentThreadId, isNewThread } = useChatState();
+  const { currentThreadId, isNewThread, selectedModel } = useChatState();
+  const { setSelectedModel } = useChatActions();
   const { input, messages, isStale, isLoading, status } = useChatThreadState();
   const { handleInputChange, handleSubmit } = useChatThreadActions();
 
-  const { containerRef, endRef, isAtBottom, scrollToBottom } =
-    useScrollToBottom();
+  // const {
+  //   containerRef,
+  //   endRef,
+  //   isAtBottom,
+  //   scrollToBottom,
+  //   scrollToBottomInstant,
+  //   scrollToShowLastMessage,
+  //   onViewportEnter,
+  //   onViewportLeave,
+  // } = useScrollToBottom();
 
-  // Scroll to bottom when a new thread is loaded/stale
+  // Set up intersection observer for the end marker
   // useEffect(() => {
-  //   if (isStale) {
-  //     scrollToBottom("instant");
+  //   const endElement = endRef.current;
+  //   const containerElement = containerRef.current;
+
+  //   if (!endElement || !containerElement) return;
+
+  //   const observer = new IntersectionObserver(
+  //     ([entry]) => {
+  //       if (entry.isIntersecting) {
+  //         onViewportEnter();
+  //       } else {
+  //         onViewportLeave();
+  //       }
+  //     },
+  //     {
+  //       root: containerElement,
+  //       rootMargin: "0px 0px 50px 0px",
+  //       threshold: 0.1,
+  //     }
+  //   );
+
+  //   observer.observe(endElement);
+  //   return () => observer.disconnect();
+  // }, [onViewportEnter, onViewportLeave]);
+
+  // Scroll to bottom when thread content is loaded
+  // useEffect(() => {
+  //   // Only scroll when we have a real thread with messages loaded
+  //   if (currentThreadId && !isNewThread && !isLoading && messages.length > 0) {
+  //     scrollToBottomInstant();
   //   }
-  // }, [isStale, scrollToBottom]);
+  // }, [
+  //   currentThreadId,
+  //   isNewThread,
+  //   isLoading,
+  //   messages.length,
+  //   scrollToBottomInstant,
+  // ]);
+
+  // Scroll to bottom when moving from stale to fresh data
+  // useEffect(() => {
+  //   if (!isStale && messages.length > 0) {
+  //     scrollToBottomInstant();
+  //   }
+  // }, [isStale, messages.length, scrollToBottomInstant]);
+
+  // No auto-scroll during streaming - user explicitly doesn't want this
 
   // simplified rendering code, extend as needed:
   return (
     <div
-      ref={containerRef}
+      // ref={containerRef}
       className="h-screen w-full overflow-y-scroll overscroll-contain"
     >
       <div className="max-w-3xl mx-auto space-y-5 p-4">
@@ -44,19 +94,20 @@ export function Chat() {
           <LoadingChatPlaceholder />
         ) : (
           messages.map((message) => (
-            <ChatMessage
-              key={message.id}
-              isStale={isStale}
-              message={{
-                id: message.id,
-                content: message.content,
-                role: message.role as "user" | "assistant",
-                timestamp: message.createdAt,
-              }}
-            />
+            <div key={message.id} data-message-role={message.role}>
+              <ChatMessage
+                isStale={isStale}
+                message={{
+                  id: message.id,
+                  content: message.content,
+                  role: message.role as "user" | "assistant",
+                  timestamp: message.createdAt,
+                }}
+              />
+            </div>
           ))
         )}
-        <div ref={endRef} className="aria-hidden h-40"></div>
+        <div className="aria-hidden h-40"></div>
       </div>
 
       <TmpChatInput
@@ -64,11 +115,13 @@ export function Chat() {
         onChange={handleInputChange}
         onSubmit={(e) => {
           handleSubmit(e);
-          scrollToBottom("smooth");
+          // scrollToShowLastMessage();
         }}
+        selectedModel={selectedModel}
+        setSelectedModel={setSelectedModel}
         isLoading={isLoading}
-        showScrollToBottom={!isAtBottom}
-        onScrollToBottomClick={() => scrollToBottom("smooth")}
+        showScrollToBottom={true}
+        onScrollToBottomClick={() => {}}
         isStreaming={status === "streaming" || status === "submitted"}
       />
     </div>
