@@ -104,7 +104,9 @@ export function ChatSidebar() {
     <Sidebar>
       <SidebarHeader className="p-4 pb-0 space-y-3">
         <div className="flex items-center justify-center">
-          <h1 className="text-lg font-semibold tracking-tight">T3 Chat</h1>
+          <h1 className="text-lg font-semibold tracking-tight">
+            T3 Chat Clone
+          </h1>
         </div>
 
         <Button onClick={handleNewChat} className="w-full" size="sm">
