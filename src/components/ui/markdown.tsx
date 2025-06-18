@@ -90,7 +90,7 @@ export function CodeBlock({
   }
 }
 
-const Link = ({
+export const Link = ({
   children,
   href,
   ...props

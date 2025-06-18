@@ -3,9 +3,15 @@
 import React from "react";
 import { useAuth } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
-import { BotIcon, ArrowRightIcon, LogInIcon } from "lucide-react";
+import {
+  BotIcon,
+  ArrowRightIcon,
+  LogInIcon,
+  Github,
+  Twitter,
+  Linkedin,
+} from "lucide-react";
 import Link from "next/link";
-import { Skeleton } from "@/components/ui/skeleton";
 
 /**
  * Home page component
@@ -21,14 +27,15 @@ export default function HomePage() {
   const { isSignedIn, isLoaded } = useAuth();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
+    <div className="min-h-screen mx-auto bg-gradient-to-br from-background via-background to-muted/20">
       <div className="container mx-auto px-4 py-16">
         <div className="max-w-4xl mx-auto text-center">
           {/* Hero Section */}
           <div className="mb-12">
             <div className="flex justify-center mb-6">
-              <div className="p-4 rounded-full bg-primary/10">
-                <BotIcon className="h-12 w-12 text-primary" />
+              <div className="relative">
+                <BotIcon className="h-16 w-16 text-primary" />
+                <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 to-purple-600/20 rounded-full blur-sm"></div>
               </div>
             </div>
 
@@ -36,56 +43,59 @@ export default function HomePage() {
               T3 Chat Clone
             </h1>
 
-            <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-              A modern AI chat interface built with Next.js 15, Convex, and
-              shadcn/ui. Experience seamless conversations with multiple AI
-              models.
+            <p className="text-xl text-muted-foreground mb-8 max-w-3xl mx-auto">
+              An open-source, multi-LLM chat interface built for the{" "}
+              <a
+                href="https://cloneathon.t3.chat"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary underline hover:text-primary/80"
+              >
+                T3 ChatCloneathon
+              </a>
+              . Experience real-time streaming, secure authentication, and a
+              modern, responsive UI.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button asChild size="lg" className="text-lg px-8">
-                {!isSignedIn ? (
-                  <Link href="/chat">
-                    Sign up and start chatting now !
-                    <ArrowRightIcon className="ml-2 h-5 w-5" />
-                  </Link>
-                ) : (
-                  <Link href="/chat">
-                    Start Chatting
-                    <ArrowRightIcon className="ml-2 h-5 w-5" />
-                  </Link>
-                )}
+              <Button asChild size="lg" className="text-lg px-8 py-6">
+                <Link href="/chat">
+                  {isSignedIn ? "Go to Chat" : "Get Started"}
+                  <ArrowRightIcon className="ml-2 h-5 w-5" />
+                </Link>
+              </Button>
+              <Button
+                asChild
+                size="lg"
+                variant="outline"
+                className="text-lg px-8 py-6"
+              >
+                <a
+                  href="https://github.com/PaulSenon/t3-chat-cloneathon"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Github className="mr-2 h-5 w-5" />
+                  View Source
+                </a>
               </Button>
             </div>
           </div>
 
           {/* Features Section */}
-          <div className="grid md:grid-cols-3 gap-8 mb-12">
-            <div className="p-6 rounded-lg bg-card border">
-              <h3 className="text-xl font-semibold mb-3">Modern UI</h3>
-              <p className="text-muted-foreground">
-                Clean, responsive interface built with shadcn/ui components and
-                Tailwind CSS.
-              </p>
-            </div>
-
-            <div className="p-6 rounded-lg bg-card border">
-              <h3 className="text-xl font-semibold mb-3">Real-time Chat</h3>
-              <p className="text-muted-foreground">
-                Streaming responses and real-time updates powered by Convex
-                database.
-              </p>
-            </div>
-
-            <div className="p-6 rounded-lg bg-card border">
-              <h3 className="text-xl font-semibold mb-3">
-                Multi-Model Support
-              </h3>
-              <p className="text-muted-foreground">
-                Support for multiple AI models including GPT-4, Claude, and
-                more.
-              </p>
-            </div>
+          <div className="grid md:grid-cols-3 gap-6 mb-16">
+            <FeatureCard
+              title="🤖 Multi-LLM Support"
+              description="Seamlessly switch between OpenAI and Anthropic models in one interface."
+            />
+            <FeatureCard
+              title="⚡ Real-time Streaming"
+              description="Powered by the Vercel AI SDK and Convex for instant, streaming responses."
+            />
+            <FeatureCard
+              title="🔒 Secure & Private"
+              description="Built with Clerk authentication and Convex Row-Level Security."
+            />
           </div>
 
           {/* Authentication Info */}
@@ -93,49 +103,122 @@ export default function HomePage() {
             <div className="mb-12 p-6 rounded-lg bg-muted/50 border">
               <h3 className="text-lg font-semibold mb-3 flex items-center justify-center gap-2">
                 <LogInIcon className="h-5 w-5" />
-                Get Started
+                Sign Up to Continue
               </h3>
               <p className="text-muted-foreground">
-                Sign up or sign in using the buttons in the top-right corner to
-                start chatting and save your conversation history.
+                Create an account or sign in using the buttons in the top-right
+                corner to save and continue your conversations.
               </p>
             </div>
           )}
 
           {/* Tech Stack */}
-          <div className="border rounded-lg p-6 bg-muted/50">
-            <h3 className="text-lg font-semibold mb-4">
-              Built with Modern Technologies
+          <div className="border rounded-lg p-6 bg-card">
+            <h3 className="text-xl font-semibold mb-6">
+              Built with a Modern, Scalable Stack
             </h3>
-            <div className="flex flex-wrap justify-center gap-4 text-sm text-muted-foreground">
-              <span className="px-3 py-1 rounded bg-background border">
-                Next.js 15
-              </span>
-              <span className="px-3 py-1 rounded bg-background border">
-                React 19
-              </span>
-              <span className="px-3 py-1 rounded bg-background border">
-                TypeScript
-              </span>
-              <span className="px-3 py-1 rounded bg-background border">
-                Convex
-              </span>
-              <span className="px-3 py-1 rounded bg-background border">
-                Clerk Auth
-              </span>
-              <span className="px-3 py-1 rounded bg-background border">
-                shadcn/ui
-              </span>
-              <span className="px-3 py-1 rounded bg-background border">
-                Tailwind CSS
-              </span>
-              <span className="px-3 py-1 rounded bg-background border">
-                AI SDK
-              </span>
+            <div className="flex flex-wrap justify-center gap-3 sm:gap-4 text-sm text-muted-foreground">
+              {[
+                "Next.js 15",
+                "Convex",
+                "Vercel AI SDK",
+                "Clerk",
+                "TypeScript",
+                "ShadCN UI",
+                "Tailwind CSS",
+                "Docker",
+              ].map((tech) => (
+                <span
+                  key={tech}
+                  className="px-4 py-2 rounded-full bg-background border"
+                >
+                  {tech}
+                </span>
+              ))}
             </div>
           </div>
+
+          {/* Footer */}
+          <footer className="mt-16 text-center text-muted-foreground">
+            <p className="mb-4">
+              A project by{" "}
+              <a
+                href="https://github.com/PaulSenon"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-foreground font-medium underline"
+              >
+                Paul Senon
+              </a>{" "}
+              for the T3.Chat Cloneathon.
+            </p>
+            <div className="flex justify-center gap-2">
+              <SocialLink
+                href="https://github.com/PaulSenon"
+                aria-label="GitHub"
+              >
+                <Github className="h-5 w-5" />
+              </SocialLink>
+              <SocialLink
+                href="https://x.com/isaaacdotdev"
+                aria-label="Twitter"
+              >
+                <Twitter className="h-5 w-5" />
+              </SocialLink>
+              <SocialLink
+                href="https://www.linkedin.com/in/paulsenon/"
+                aria-label="LinkedIn"
+              >
+                <Linkedin className="h-5 w-5" />
+              </SocialLink>
+            </div>
+            <p className="mt-6 text-xs">
+              Licensed under the{" "}
+              <a
+                href="https://github.com/PaulSenon/t3-chat-cloneathon/blob/main/LICENSE.TXT"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline"
+              >
+                MIT License
+              </a>
+              .
+            </p>
+          </footer>
         </div>
       </div>
     </div>
   );
 }
+
+const FeatureCard = ({
+  title,
+  description,
+}: {
+  title: string;
+  description: string;
+}) => (
+  <div className="p-6 rounded-lg bg-card border text-left">
+    <h3 className="text-xl font-semibold mb-3">{title}</h3>
+    <p className="text-muted-foreground">{description}</p>
+  </div>
+);
+
+const SocialLink = ({
+  href,
+  children,
+  ...props
+}: React.AnchorHTMLAttributes<HTMLAnchorElement> & {
+  href: string;
+  children: React.ReactNode;
+}) => (
+  <a
+    href={href}
+    target="_blank"
+    rel="noopener noreferrer"
+    className="p-2 text-muted-foreground hover:text-foreground transition-colors"
+    {...props}
+  >
+    {children}
+  </a>
+);

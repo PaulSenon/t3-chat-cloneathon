@@ -100,6 +100,7 @@ export function ChatThreadProvider({
     id: currentThreadId, // use the provided chat ID
     initialMessages, // initial messages if provided
     sendExtraMessageFields: true, // send id and createdAt for each message
+    experimental_throttle: 50,
     // only send the last message to the server:
     // experimental_prepareRequestBody({ messages, id }) {
     //   return { message: messages[messages.length - 1], id };
@@ -199,6 +200,28 @@ export function ChatThreadProvider({
       }
     );
   });
+  // const standaloneOptimisticUpdate = useStandaloneOptimisticUpdate();
+  // const updateLocalThreadOptimistic = standaloneOptimisticUpdate(
+  //   api.chat.patchChat,
+  //   (localStore, mutationArgs) => {
+  //     optimisticallyUpdateValueInPaginatedQuery(
+  //       localStore,
+  //       api.chat.getUserThreadsForListing,
+  //       {},
+  //       (currentValue) => {
+  //         if (mutationArgs.id === currentValue._id) {
+  //           return {
+  //             ...currentValue,
+  //             liveState: mutationArgs.liveState ?? currentValue.liveState,
+  //             lastUsedModelId:
+  //               mutationArgs.lastUsedModelId ?? currentValue.lastUsedModelId,
+  //           };
+  //         }
+  //         return currentValue;
+  //       }
+  //     );
+  //   }
+  // );
   const handleSubmit: UseChatHelpers["handleSubmit"] = (e) => {
     e?.preventDefault?.();
     actions.handleSubmit();

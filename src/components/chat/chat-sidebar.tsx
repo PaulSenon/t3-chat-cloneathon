@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 import {
   Sidebar,
@@ -13,9 +13,10 @@ import {
 } from "@/components/ui/sidebar";
 import { UserProfileButton } from "../auth/user-avatar";
 import { Separator } from "../ui/separator";
+import { Button } from "../ui/button";
 import { api } from "../../../convex/_generated/api";
 import { Skeleton } from "@/components/ui/skeleton";
-import { MessageCircle, Pin, X } from "lucide-react";
+import { MessageCircle, Pin, X, Plus } from "lucide-react";
 import { useChatActions, useChatState } from "@/providers/ChatStateProvider";
 import { useColdCachedPaginatedQuery } from "@/hooks/useColdCachedQuery";
 import {
@@ -25,6 +26,40 @@ import {
 import { Doc } from "../../../convex/_generated/dataModel";
 
 type ThreadItem = Omit<Doc<"threads">, "messages" | "metadata">;
+
+// Simple intersection observer hook - triggers callback once when sentinel is seen
+function useIntersectionTrigger(
+  onTrigger: () => void,
+  enabled: boolean = true
+) {
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel || !enabled) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const [entry] = entries;
+        if (entry?.isIntersecting) {
+          onTrigger();
+        }
+      },
+      {
+        rootMargin: "100px", // Trigger 100px before the sentinel is visible
+        threshold: 0.1,
+      }
+    );
+
+    observer.observe(sentinel);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [onTrigger, enabled]);
+
+  return sentinelRef;
+}
 
 export function ChatSidebar() {
   const { currentThreadId } = useChatState();
@@ -39,6 +74,16 @@ export function ChatSidebar() {
         initialNumItems: 50,
       }
     );
+  const isExhausted = status === "Exhausted";
+
+  // Add intersection trigger for infinite scroll
+  const sentinelRef = useIntersectionTrigger(
+    () => {
+      console.log("LOAD MORE");
+      loadMore(20);
+    },
+    !isExhausted && !isLoading // Only enabled when we can load more and not currently loading
+  );
 
   const handleThreadClick = (uuid: string) => {
     actions.openChat(uuid);
@@ -48,19 +93,25 @@ export function ChatSidebar() {
     actions.openNewChat();
   };
 
+  console.log("SIDEBAR", {
+    isLoading,
+    isExhausted,
+    status,
+    results,
+  });
+
   return (
     <Sidebar>
-      <SidebarHeader className="p-4">
-        <h1 className="text-xl font-medium flex-grow text-center">T3 Chat</h1>
-        <Separator className="mt-2" />
-        <div className="mt-3">
-          <button
-            onClick={handleNewChat}
-            className="w-full px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
-          >
-            New Chat
-          </button>
+      <SidebarHeader className="p-4 pb-0 space-y-3">
+        <div className="flex items-center justify-center">
+          <h1 className="text-lg font-semibold tracking-tight">T3 Chat</h1>
         </div>
+
+        <Button onClick={handleNewChat} className="w-full" size="sm">
+          <Plus className="h-4 w-4" />
+          New Chat
+        </Button>
+        <Separator />
       </SidebarHeader>
 
       <SidebarContent className="p-2">
@@ -71,8 +122,8 @@ export function ChatSidebar() {
 
           <div className="space-y-1 mt-2">
             {isLoading ? (
-              // Loading skeleton
-              Array.from({ length: 6 }).map((_, i) => (
+              // Initial loading skeleton
+              Array.from({ length: 20 }).map((_, i) => (
                 <ThreadItemSkeleton key={i} index={i} />
               ))
             ) : results.length === 0 ? (
@@ -83,19 +134,30 @@ export function ChatSidebar() {
                 <p className="text-xs">Start a new thread</p>
               </div>
             ) : (
-              // Thread list
-              results
-                .filter((thread) => thread.status === "active")
-                .map((thread) => (
-                  <ThreadItemMemo
-                    key={thread._id}
-                    thread={thread}
-                    isActive={currentThreadId === thread.uuid}
-                    isStale={isStale}
-                    onClick={() => handleThreadClick(thread.uuid)}
-                    liveState={thread.liveState}
+              <>
+                {/* Thread list */}
+                {results
+                  .filter((thread) => thread.status === "active")
+                  .map((thread) => (
+                    <ThreadItemMemo
+                      key={thread._id}
+                      thread={thread}
+                      isActive={currentThreadId === thread.uuid}
+                      isStale={isStale}
+                      onClick={() => handleThreadClick(thread.uuid)}
+                      liveState={thread.liveState}
+                    />
+                  ))}
+
+                {/* Sentinel element for infinite scroll */}
+                {!isExhausted && (
+                  <div
+                    ref={sentinelRef}
+                    className="h-1 w-full"
+                    aria-hidden="true"
                   />
-                ))
+                )}
+              </>
             )}
           </div>
         </SidebarGroup>

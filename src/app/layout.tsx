@@ -10,6 +10,7 @@ import {
   SignUpButton,
 } from "@/components/auth/auth-button";
 import { Suspense } from "react";
+import { SidebarProvider } from "@/components/ui/sidebar";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -32,14 +33,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <Providers>
-      <html lang="en">
-        <body
-          className={`${geistSans.variable} ${geistMono.variable} antialiased dark`}
-        >
-          {children}
-        </body>
-      </html>
-    </Providers>
+    <SidebarProvider>
+      <Providers>
+        <html lang="en">
+          <body
+            className={`${geistSans.variable} ${geistMono.variable} antialiased dark`}
+          >
+            {children}
+          </body>
+        </html>
+      </Providers>
+    </SidebarProvider>
   );
 }

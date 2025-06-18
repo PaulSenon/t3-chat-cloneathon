@@ -10,6 +10,11 @@ import {
 } from "@/providers/ChatThreadProvider";
 import { cn } from "@/lib/utils";
 import { UIMessage } from "ai";
+import { WelcomeChat } from "./welcom-chat";
+import { useAuth } from "@/hooks/useAuth";
+import { useScrollToBottom } from "@/hooks/use-scroll-to-bottom";
+import { useEffect, useRef } from "react";
+import { useLayoutEffect } from "react";
 // import { useScrollToBottom } from "@/hooks/use-scroll-to-bottom";
 
 export type OptimisticMessage = UIMessage & {
@@ -30,12 +35,9 @@ const createOptimisticStepStartMessage = (): OptimisticMessage => ({
 });
 
 export function Chat() {
-  const {
-    currentThreadId,
-    isNewThread,
-    selectedModel,
-    hasSubmittedSinceCurrentThreadLoaded,
-  } = useChatState();
+  const { isFullyReady } = useAuth();
+  const { isNewThread, selectedModel, hasSubmittedSinceCurrentThreadLoaded } =
+    useChatState();
   const { setSelectedModel } = useChatActions();
   const {
     input,
@@ -57,42 +59,79 @@ export function Chat() {
   const optimisticMessages: OptimisticMessage[] = isWaitingForFirstToken
     ? [...messages, createOptimisticStepStartMessage()]
     : messages;
-  // const {
-  //   containerRef,
-  //   endRef,
-  //   isAtBottom,
-  //   scrollToBottom,
-  //   scrollToBottomInstant,
-  //   scrollToShowLastMessage,
-  //   onViewportEnter,
-  //   onViewportLeave,
-  // } = useScrollToBottom();
+  const {
+    containerRef,
+    endRef,
+    isAtBottom,
+    scrollToBottom,
+    scrollToBottomInstant,
+    onViewportEnter,
+    onViewportLeave,
+  } = useScrollToBottom();
 
   // Set up intersection observer for the end marker
-  // useEffect(() => {
-  //   const endElement = endRef.current;
-  //   const containerElement = containerRef.current;
+  useEffect(() => {
+    const endElement = endRef.current;
+    const containerElement = containerRef.current;
 
-  //   if (!endElement || !containerElement) return;
+    if (!endElement || !containerElement) return;
 
-  //   const observer = new IntersectionObserver(
-  //     ([entry]) => {
-  //       if (entry.isIntersecting) {
-  //         onViewportEnter();
-  //       } else {
-  //         onViewportLeave();
-  //       }
-  //     },
-  //     {
-  //       root: containerElement,
-  //       rootMargin: "0px 0px 50px 0px",
-  //       threshold: 0.1,
-  //     }
-  //   );
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          onViewportEnter();
+        } else {
+          onViewportLeave();
+        }
+      },
+      {
+        root: containerElement,
+        rootMargin: "0px 0px 50px 0px",
+        threshold: 0.1,
+      }
+    );
 
-  //   observer.observe(endElement);
-  //   return () => observer.disconnect();
-  // }, [onViewportEnter, onViewportLeave]);
+    observer.observe(endElement);
+    return () => observer.disconnect();
+  }, [onViewportEnter, onViewportLeave, endRef, containerRef]);
+
+  // Alternative: Direct scroll on message changes (more aggressive)
+  // useLayoutEffect(() => {
+  //   if (isStreamingOptimistic && isAtBottom && !isLoadingThreadData) {
+  //     scrollToBottomInstant();
+  //   }
+  // }, [
+  //   messages.length,
+  //   isStreamingOptimistic,
+  //   isAtBottom,
+  //   scrollToBottomInstant,
+  //   isLoadingThreadData,
+  // ]);
+
+  const hasRendered = useRef(false);
+  useLayoutEffect(() => {
+    if (hasRendered.current) return;
+    if (isLoadingThreadData) return;
+    requestAnimationFrame(() => {
+      scrollToBottomInstant();
+      hasRendered.current = true;
+    });
+  }, [scrollToBottomInstant, isLoadingThreadData]);
+
+  // Initial scroll to bottom when thread loads
+  // const hasAlreadyScrolledToBottom = useRef(false);
+  // useLayoutEffect(() => {
+  //   if (
+  //     !isAtBottom &&
+  //     !hasAlreadyScrolledToBottom.current &&
+  //     !isLoadingThreadData
+  //   ) {
+  //     hasAlreadyScrolledToBottom.current = true;
+  //     requestAnimationFrame(() => {
+  //       scrollToBottomInstant();
+  //     });
+  //   }
+  // }, [isLoadingThreadData, isAtBottom, scrollToBottomInstant]);
 
   // Scroll to bottom when thread content is loaded
   // useEffect(() => {
@@ -120,14 +159,14 @@ export function Chat() {
   // simplified rendering code, extend as needed:
   return (
     <div
-      // ref={containerRef}
+      ref={containerRef}
       className="h-screen w-full overflow-y-scroll overscroll-contain"
     >
       <div className="max-w-3xl mx-auto p-4">
-        <div className="aria-hidden h-5"></div>
+        <div className="aria-hidden h-20"></div>
 
         {isNewThread ? (
-          <NewChatPlaceholder />
+          <WelcomeChat />
         ) : isLoadingThreadData && messages.length === 0 ? (
           <LoadingChatPlaceholder />
         ) : (
@@ -146,6 +185,8 @@ export function Chat() {
                   key={message.id}
                   data-message-role={message.role}
                   className={cn(
+                    "opacity-0 transition-opacity duration-200 ease-in",
+                    hasRendered.current && "opacity-100",
                     message.role === "assistant" &&
                       hasSubmittedSinceCurrentThreadLoaded &&
                       "nth-last-2:min-h-[calc(100vh-20rem)]"
@@ -161,7 +202,7 @@ export function Chat() {
             })}
           </>
         )}
-        <div className="aria-hidden h-40"></div>
+        <div className="aria-hidden h-40" ref={endRef}></div>
       </div>
 
       <TmpChatInput
@@ -170,28 +211,19 @@ export function Chat() {
         onChange={handleInputChange}
         onSubmit={(e) => {
           handleSubmit(e);
-          // scrollToShowLastMessage();
+          scrollToBottomInstant();
         }}
         selectedModel={selectedModel}
         setSelectedModel={setSelectedModel}
         isLoading={isLoadingThreadData}
-        showScrollToBottom={true}
-        onScrollToBottomClick={() => {}}
+        showScrollToBottom={!isAtBottom}
+        onScrollToBottomClick={() => scrollToBottom()}
         isStreaming={status === "streaming" || status === "submitted"}
+        disabled={!isFullyReady}
       />
     </div>
   );
 }
-
-const NewChatPlaceholder = () => {
-  return (
-    <div className="flex flex-col items-center justify-center py-12 text-center">
-      <BotIcon className="h-12 w-12 text-muted-foreground mb-4" />
-      <h2 className="text-lg font-semibold mb-2">Start a new conversation</h2>
-      <p className="text-muted-foreground">Send a message to begin chatting.</p>
-    </div>
-  );
-};
 
 const LoadingChatPlaceholder = () => {
   return (

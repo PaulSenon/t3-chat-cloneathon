@@ -130,8 +130,8 @@ export function useColdCachedPaginatedQuery<
     };
   }
 
-  if (isPaginatedLoadingBug || isRemoteDataLoading) {
-    if (!stalePaginatedData || stalePaginatedData.results.length === 0) {
+  if (isRemoteDataLoading) {
+    if (!stalePaginatedData) {
       return {
         loadMore: remotePaginatedData.loadMore,
         results: [],

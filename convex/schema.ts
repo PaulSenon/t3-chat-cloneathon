@@ -124,7 +124,8 @@ export default defineSchema({
     // .index("byParentThreadId", ["parentThreadId"]) // for forking/branching (outside of MVP scope)
     // .index("byWorkspaceId", ["workspaceId"]) // for future workspace feature (outside of MVP scope)
     .index("byUserIdUpdatedAt", ["userId", "updatedAt"])
-    .index("byUuid", ["uuid"]),
+    .index("byUuid", ["uuid"])
+    .index("byUserIdStatus", ["userId", "status"]),
   // .index("byWorkspaceIdUpdatedAt", ["workspaceId", "updatedAt"]) // for future workspace feature (outside of MVP scope)
 
   // aiModels: defineTable({

@@ -178,8 +178,12 @@ export const getUserThreadsForListing = queryWithRLS({
     paginationOpts: paginationOptsValidator,
   },
   handler: async (ctx, args) => {
+    const user = await INTERNAL_getCurrentUserOrThrow(ctx);
     const paginatedThreads = await ctx.db
       .query("threads")
+      .withIndex("byUserIdStatus", (q) =>
+        q.eq("userId", user._id).eq("status", "active")
+      )
       .order("desc")
       .paginate(args.paginationOpts);
 

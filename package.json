@@ -1,7 +1,12 @@
 {
   "name": "app",
   "version": "0.1.0",
-  "private": true,
+  "license": "MIT",
+  "author": {
+    "name": "Paul SENON",
+    "email": "contact.pro@paulsenon.com",
+    "url": "https://www.linkedin.com/in/paulsenon"
+  },
   "type": "module",
   "scripts": {
     "dev": "next dev --turbopack",

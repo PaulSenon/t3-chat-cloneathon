@@ -26,6 +26,7 @@ import { DynamicCustomIcon } from "@/components/icons";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "../ui/skeleton";
 import { Model, ModelCapabilities, modelsConfig } from "@/types/aiModels";
+import { useScrollToBottom } from "@/hooks/use-scroll-to-bottom";
 
 export interface TmpChatInputProps {
   input?: string;
@@ -38,6 +39,7 @@ export interface TmpChatInputProps {
   selectedModel?: Model;
   setSelectedModel: (modelId: string) => void;
   isStale: boolean;
+  disabled: boolean;
 }
 
 // yolo
@@ -62,15 +64,18 @@ export default function TmpChatInput({
   selectedModel,
   setSelectedModel,
   isStale,
+  disabled,
 }: TmpChatInputProps) {
   const canSubmit =
     !isLoading && !isStreaming && !isStale && input && input.trim().length > 0;
   const canStop = isStreaming;
 
   useEffect(() => {
-    // Automatically focus the input on initial render
-    focusInput();
-  }, []);
+    if (!disabled) {
+      // Automatically focus the input on initial render
+      focusInput();
+    }
+  }, [disabled]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -106,6 +111,7 @@ export default function TmpChatInput({
             <div className="flex flex-grow flex-col">
               <div className="flex flex-grow flex-row items-start">
                 <TextareaPure
+                  disabled={disabled}
                   input={input}
                   onChange={onChange}
                   handleKeyDown={handleKeyDown}
@@ -119,7 +125,7 @@ export default function TmpChatInput({
                 <div className="-mr-0.5 -mt-0.5 flex items-center justify-center gap-2">
                   <SubmitButtonPure
                     state={isStreaming ? "stop" : "send"}
-                    disabled={!canStop && !canSubmit}
+                    disabled={(!canStop && !canSubmit) || disabled}
                   />
                 </div>
                 <div className="flex flex-col gap-2 pr-2 sm:flex-row sm:items-center">
@@ -130,7 +136,7 @@ export default function TmpChatInput({
                       selectedModel={selectedModel}
                       setSelectedModel={setSelectedModel}
                       isLoading={isLoading}
-                      disabled={isLoading}
+                      disabled={isLoading || disabled}
                     />
                     <ModelOptionSearchPure />
                     <ModelOptionFileAttachPure />
@@ -220,6 +226,7 @@ const TextareaPure = ({
   maxRows,
   placeholder,
   className,
+  disabled,
 }: {
   input?: string;
   onChange?: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
@@ -228,6 +235,7 @@ const TextareaPure = ({
   maxRows?: number;
   placeholder?: string;
   className?: string;
+  disabled?: boolean;
 }) => {
   return (
     <TextareaAutosize
@@ -240,6 +248,7 @@ const TextareaPure = ({
       className={className}
       maxRows={maxRows}
       minRows={minRows}
+      disabled={disabled}
     />
   );
 };
