@@ -54,10 +54,6 @@ export function Chat() {
   const isStreaming = status === "streaming";
   const isStreamingOptimistic = isWaitingForFirstToken || isStreaming;
 
-  // TODO: ui should be in "loading" state upt to first part that is not a step-start
-  // const isWaitingForFirstMeaningfulToken =
-  //   isWaitingForFirstToken || isStreaming;
-
   const optimisticMessages: OptimisticMessage[] = isWaitingForFirstToken
     ? [...messages, createOptimisticStepStartMessage()]
     : messages;
@@ -127,11 +123,8 @@ export function Chat() {
       // ref={containerRef}
       className="h-screen w-full overflow-y-scroll overscroll-contain"
     >
-      <div className="max-w-3xl mx-auto space-y-5 p-4">
-        <div className="aria-hidden h-10"></div>
-        <div className="text-sm text-muted-foreground">
-          {currentThreadId ?? "null"} {messages.length} {messages?.length}
-        </div>
+      <div className="max-w-3xl mx-auto p-4">
+        <div className="aria-hidden h-5"></div>
 
         {isNewThread ? (
           <NewChatPlaceholder />
@@ -140,12 +133,13 @@ export function Chat() {
         ) : (
           <>
             {optimisticMessages.map((message, index) => {
-              const isLastAssistantMessage =
-                index === optimisticMessages.length - 1 &&
-                message.role === "assistant";
+              const isLastMessage = index === optimisticMessages.length - 1;
 
-              const isMessageLoading =
-                isLastAssistantMessage && isStreamingOptimistic;
+              const isLastMessageAndAssistant =
+                isLastMessage && message.role === "assistant";
+
+              const isCurrentMessageStreaming =
+                isLastMessageAndAssistant && isStreamingOptimistic;
 
               return (
                 <div
@@ -160,8 +154,7 @@ export function Chat() {
                   <ChatMessage
                     isStale={isStale}
                     message={message}
-                    isOptimistic={!!message.isOptimistic}
-                    isLoading={isMessageLoading}
+                    isStreaming={isCurrentMessageStreaming}
                   />
                 </div>
               );
@@ -172,6 +165,7 @@ export function Chat() {
       </div>
 
       <TmpChatInput
+        isStale={isStale}
         input={input}
         onChange={handleInputChange}
         onSubmit={(e) => {

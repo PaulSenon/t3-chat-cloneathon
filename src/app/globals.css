@@ -42,6 +42,8 @@
 }
 
 :root {
+  --base-font-size: 16px;
+  --base-line-height: 1.6;
   --radius: 0.625rem;
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
@@ -116,5 +118,14 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+
+
+  html {
+    font-size: var(--base-font-size);
+    line-height: var(--base-line-height);
+  }
+  h1, h2, h3 {
+    line-height: 1.2;
   }
 }

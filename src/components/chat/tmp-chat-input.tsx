@@ -37,6 +37,7 @@ export interface TmpChatInputProps {
   onScrollToBottomClick: () => void;
   selectedModel?: Model;
   setSelectedModel: (modelId: string) => void;
+  isStale: boolean;
 }
 
 // yolo
@@ -60,9 +61,10 @@ export default function TmpChatInput({
   onScrollToBottomClick,
   selectedModel,
   setSelectedModel,
+  isStale,
 }: TmpChatInputProps) {
   const canSubmit =
-    !isLoading && !isStreaming && input && input.trim().length > 0;
+    !isLoading && !isStreaming && !isStale && input && input.trim().length > 0;
   const canStop = isStreaming;
 
   useEffect(() => {

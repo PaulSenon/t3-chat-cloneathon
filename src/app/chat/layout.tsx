@@ -16,8 +16,8 @@ export default function ChatLayout({
         <SidebarProvider>
           <ChatStateProvider>
             <ChatSidebar />
-            <main className="relative w-full">
-              <SidebarTrigger className="fixed left-3 top-3 z-50 flex p-4 bg-background-transparent backdrop-blur-md top-safe-offset-2" />
+            <main className="relative group/sidebar-wrapper flex-1 min-w-0 w-full">
+              <SidebarTrigger className="fixed left-3 top-3 z-50 flex p-4 bg-background-transparent top-safe-offset-2" />
               {children}
             </main>
           </ChatStateProvider>

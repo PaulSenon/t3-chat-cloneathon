@@ -1,6 +1,9 @@
 import { AnthropicProviderOptions, createAnthropic } from "@ai-sdk/anthropic";
 import { createOpenAI } from "@ai-sdk/openai";
-import { createGoogleGenerativeAI } from "@ai-sdk/google";
+import {
+  createGoogleGenerativeAI,
+  GoogleGenerativeAIProviderOptions,
+} from "@ai-sdk/google";
 import {
   createProviderRegistry,
   customProvider,
@@ -242,7 +245,22 @@ export const registry = createProviderRegistry({
     languageModels: {
       "gemini-2.0-flash-lite": google("gemini-2.0-flash-lite"),
       "gemini-2.0-flash": google("gemini-2.0-flash"),
-      "gemini-2.5-pro": google("gemini-2.5-pro-preview-05-06"),
+      "gemini-2.5-pro": wrapLanguageModel({
+        model: google("gemini-2.5-pro-preview-05-06"),
+        middleware: defaultSettingsMiddleware({
+          settings: {
+            providerMetadata: {
+              google: {
+                responseModalities: ["TEXT"],
+                thinkingConfig: {
+                  includeThoughts: true,
+                  thinkingBudget: 32000,
+                },
+              } satisfies GoogleGenerativeAIProviderOptions,
+            },
+          },
+        }),
+      }),
     },
   }),
 });

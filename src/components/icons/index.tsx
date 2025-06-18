@@ -2,9 +2,10 @@ import React, { forwardRef } from "react";
 import { OpenAIIcon } from "./openai";
 import { AnthropicIcon } from "./anthropic";
 import { GeminiIcon } from "./gemini";
+import { BrainIcon } from "./brain";
 
 // Export individual icons
-export { OpenAIIcon, AnthropicIcon, GeminiIcon };
+export { OpenAIIcon, AnthropicIcon, GeminiIcon, BrainIcon };
 
 // Icon mapping and types
 const iconMap = {

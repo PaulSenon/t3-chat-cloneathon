@@ -113,7 +113,7 @@ export async function POST(req: Request) {
   const messages = appendClientMessage({
     messages: pastMessages,
     message,
-  });
+  }).filter((m) => m.content.length > 0);
 
   if (!existingThread || !existingThread.title) {
     generateChatTitle(messages).then((title) => {
@@ -177,5 +177,8 @@ export async function POST(req: Request) {
     headers: {
       "X-Thread-Id": thread._id,
     },
+    sendReasoning: true,
+    sendSources: true,
+    sendUsage: true,
   });
 }
