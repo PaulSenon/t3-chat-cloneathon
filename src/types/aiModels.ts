@@ -81,4 +81,8 @@ export const modelsConfig: Model[] = [
   },
 ] as const;
 
+export function getModelById(id: string): Model | undefined {
+  return modelsConfig.find((model) => model.id === id);
+}
+
 export const defaultModelId = "google:gemini-2.0-flash-lite";
