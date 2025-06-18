@@ -46,7 +46,7 @@ function useIntersectionTrigger(
         }
       },
       {
-        rootMargin: "100px", // Trigger 100px before the sentinel is visible
+        rootMargin: "200px", // Trigger 100px before the sentinel is visible
         threshold: 0.1,
       }
     );

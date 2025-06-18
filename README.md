@@ -30,6 +30,23 @@ This project leverages a modern, type-safe, and scalable technology stack.
 - **Language**: [TypeScript](https://www.typescriptlang.org/) (Strict Mode)
 - **Containerization (Dev)**: [Docker](https://www.docker.com/) & Docker Compose
 
+## 🚧 Roadmap
+
+Didn't had time to implement but wanted to:
+
+- [ ] smooth streaming
+- [ ] stream error handling
+- [ ] input save per thread (in case of error, page reload etc)
+- [ ] code colorization
+- [ ] thread renaming
+- [ ] stream resumability
+- [ ] favorite threads
+- [ ] web search
+- [ ] better optimized Markdown rendering
+- [ ] public shared threads
+- [ ] common primitive widget tool (llm) to display data (list, images, etc)
+- [ ] clean my absolute mess of a codebase because I rushed it
+
 ## 🏛️ Architecture Highlights
 
 - **Server-Side AI Operations**: All AI SDK calls are handled in Next.js API Routes (`/api/chat`) to protect API keys and manage provider logic securely.

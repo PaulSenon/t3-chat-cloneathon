@@ -27,6 +27,19 @@ const bodySchema = z.object({
 
 export type ChatBody = z.infer<typeof bodySchema>;
 
+// Helper function to create optimistic step-start message
+const createOptimisticStepStartMessage = (): UIMessage => ({
+  id: Date.now().toString(),
+  role: "assistant",
+  parts: [
+    {
+      type: "step-start",
+    },
+  ],
+  createdAt: new Date(),
+  content: "",
+});
+
 export async function POST(req: Request) {
   // 1. Authentication
   const { userId, getToken } = await auth();
@@ -93,8 +106,8 @@ export async function POST(req: Request) {
     return new Response("Failed to create or get thread", { status: 500 });
   }
 
-  const deferredPromises: Promise<unknown>[] = [];
-  deferredPromises.push(
+  const deferredPromiseChain =
+    // deferredPromises.push(
     fetchMutation(
       api.chat.setChatLastUsedModel,
       {
@@ -102,8 +115,8 @@ export async function POST(req: Request) {
         lastUsedModelId: selectedModelId,
       },
       { token }
-    )
-  );
+    );
+  // );
 
   const pastMessages: Message[] = thread.messages
     ? superjson.parse(thread.messages)
@@ -115,11 +128,33 @@ export async function POST(req: Request) {
     message,
   }).filter((m) => m.content.length > 0);
 
+  // Add optimistic step-start message immediately for UI feedback
+  const messagesWithStepStart = [
+    ...messages,
+    createOptimisticStepStartMessage(),
+  ];
+
+  // TODO: non blocking save
+  // Save the optimistic step-start message to the database immediately
+  deferredPromiseChain.finally(() =>
+    fetchMutation(
+      api.chat.saveChat,
+      {
+        uuid: thread.uuid,
+        messages: superjson.stringify(messagesWithStepStart),
+        liveState: "streaming",
+      },
+      { token }
+    )
+  );
+
   if (!existingThread || !existingThread.title) {
-    generateChatTitle(messages).then((title) => {
-      console.log("🔍 Generated title:", title);
-      fetchMutation(api.chat.setChatTitle, { uuid: id, title }, { token });
-    });
+    deferredPromiseChain.finally(() =>
+      generateChatTitle(messages).then((title) => {
+        console.log("🔍 Generated title:", title);
+        fetchMutation(api.chat.setChatTitle, { uuid: id, title }, { token });
+      })
+    );
   }
 
   const result = streamText({
@@ -129,7 +164,7 @@ export async function POST(req: Request) {
     async onFinish({ response }) {
       // console.log("🔍 Response:", JSON.stringify(response, null, 2));
       const newMessages = appendResponseMessages({
-        messages,
+        messages, // Use original messages without step-start for final save
         responseMessages: response.messages,
       });
 
@@ -159,16 +194,11 @@ export async function POST(req: Request) {
   // consume the stream to ensure it runs to completion & triggers onFinish
   // even when the client response is aborted:
   result.consumeStream(); // no await
-  await fetchMutation(
-    api.chat.updateChatLiveState,
-    {
-      id: thread._id,
-      liveState: "streaming",
-    },
-    { token }
-  );
 
-  await Promise.all(deferredPromises).catch((error) => {
+  // await Promise.all(deferredPromises).catch((error) => {
+  //   console.error("🔴 Error in deferred promises:", error);
+  // });
+  await deferredPromiseChain.catch((error) => {
     console.error("🔴 Error in deferred promises:", error);
   });
 

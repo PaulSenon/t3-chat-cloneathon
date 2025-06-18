@@ -23,6 +23,7 @@ import { ChatBody } from "@/app/api/chat/route";
 interface ChatThreadActions {
   handleInputChange: UseChatHelpers["handleInputChange"];
   handleSubmit: UseChatHelpers["handleSubmit"];
+  reload: UseChatHelpers["reload"];
 }
 
 interface ChatThreadState {
@@ -95,6 +96,8 @@ export function ChatThreadProvider({
     handleSubmit: chatHandleSubmit,
     status,
     messages,
+    setMessages: setChatMessages,
+    reload: chatReload,
   } = useChat({
     api: "/api/chat",
     id: currentThreadId, // use the provided chat ID
@@ -231,6 +234,7 @@ export function ChatThreadProvider({
         messages: superjson.stringify(messages),
       });
     } else if (currentThread) {
+      // TODO: find a way to not race with server... in case of error we are overriding it.
       updateThreadOptimistic({
         id: currentThread?._id,
         liveState: "pending",
@@ -238,6 +242,11 @@ export function ChatThreadProvider({
       });
     }
     chatHandleSubmit(e);
+  };
+
+  const reload: UseChatHelpers["reload"] = () => {
+    // TODO: make sure not duplicated messages
+    return chatReload();
   };
 
   const value: ChatThreadContextValue = {
@@ -251,6 +260,7 @@ export function ChatThreadProvider({
     actions: {
       handleInputChange,
       handleSubmit,
+      reload,
     },
   };
   return (

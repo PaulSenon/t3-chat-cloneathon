@@ -215,7 +215,7 @@ const MessageActions = ({
   );
 };
 
-const LoaderAnimation = ({ className }: { className?: string }) => {
+export const LoaderAnimation = ({ className }: { className?: string }) => {
   return (
     <div className={cn("flex items-center space-x-1", className)}>
       <div className="w-2 h-2 bg-muted-foreground/60 rounded-full animate-bounce [animation-delay:-0.3s]"></div>

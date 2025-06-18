@@ -206,7 +206,11 @@ const UserInfos = ({
             isStale && "text-muted"
           )}
         >
-          {convexUser?.tier ?? null}
+          {convexUser?.tier
+            ? convexUser.tier === "free"
+              ? "Free"
+              : "Premium"
+            : "Free"}
         </span>
       )}
     </div>

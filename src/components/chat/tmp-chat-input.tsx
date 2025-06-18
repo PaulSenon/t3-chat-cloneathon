@@ -27,6 +27,8 @@ import { cn } from "@/lib/utils";
 import { Skeleton } from "../ui/skeleton";
 import { Model, ModelCapabilities, modelsConfig } from "@/types/aiModels";
 import { useScrollToBottom } from "@/hooks/use-scroll-to-bottom";
+import { api } from "../../../convex/_generated/api";
+import { useColdCachedQuery } from "@/hooks/useColdCachedQuery";
 
 export interface TmpChatInputProps {
   input?: string;
@@ -66,6 +68,9 @@ export default function TmpChatInput({
   isStale,
   disabled,
 }: TmpChatInputProps) {
+  const { data: convexUser } = useColdCachedQuery(api.users.getCurrentUser);
+  const isConvexUserLoading = convexUser === undefined;
+
   const canSubmit =
     !isLoading && !isStreaming && !isStale && input && input.trim().length > 0;
   const canStop = isStreaming;
@@ -131,12 +136,12 @@ export default function TmpChatInput({
                 <div className="flex flex-col gap-2 pr-2 sm:flex-row sm:items-center">
                   <div className="ml-[-7px] flex items-center gap-1">
                     <ModelSelectorPure
-                      isPremiumUser={false} // TODO: get from user
+                      isPremiumUser={convexUser?.tier === "premium-level-1"}
                       models={modelsConfig}
                       selectedModel={selectedModel}
                       setSelectedModel={setSelectedModel}
                       isLoading={isLoading}
-                      disabled={isLoading || disabled}
+                      disabled={isLoading || isConvexUserLoading || disabled}
                     />
                     <ModelOptionSearchPure />
                     <ModelOptionFileAttachPure />

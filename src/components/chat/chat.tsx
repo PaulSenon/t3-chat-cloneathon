@@ -15,6 +15,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useScrollToBottom } from "@/hooks/use-scroll-to-bottom";
 import { useEffect, useRef } from "react";
 import { useLayoutEffect } from "react";
+import { Button } from "../ui/button";
+import { LoaderAnimation } from "./chat-message";
 // import { useScrollToBottom } from "@/hooks/use-scroll-to-bottom";
 
 export type OptimisticMessage = UIMessage & {
@@ -36,8 +38,12 @@ const createOptimisticStepStartMessage = (): OptimisticMessage => ({
 
 export function Chat() {
   const { isFullyReady } = useAuth();
-  const { isNewThread, selectedModel, hasSubmittedSinceCurrentThreadLoaded } =
-    useChatState();
+  const {
+    isNewThread,
+    selectedModel,
+    hasSubmittedSinceCurrentThreadLoaded,
+    currentThread,
+  } = useChatState();
   const { setSelectedModel } = useChatActions();
   const {
     input,
@@ -46,7 +52,7 @@ export function Chat() {
     isLoading: isLoadingThreadData,
     status,
   } = useChatThreadState();
-  const { handleInputChange, handleSubmit } = useChatThreadActions();
+  const { handleInputChange, handleSubmit, reload } = useChatThreadActions();
 
   const isWaitingForFirstToken =
     status === "submitted" &&
@@ -113,7 +119,9 @@ export function Chat() {
     if (hasRendered.current) return;
     if (isLoadingThreadData) return;
     requestAnimationFrame(() => {
-      scrollToBottomInstant();
+      requestAnimationFrame(() => {
+        scrollToBottomInstant();
+      });
       hasRendered.current = true;
     });
   }, [scrollToBottomInstant, isLoadingThreadData]);
@@ -164,7 +172,6 @@ export function Chat() {
     >
       <div className="max-w-3xl mx-auto p-4">
         <div className="aria-hidden h-20"></div>
-
         {isNewThread ? (
           <WelcomeChat />
         ) : isLoadingThreadData && messages.length === 0 ? (
@@ -202,6 +209,17 @@ export function Chat() {
             })}
           </>
         )}
+        {!isStreamingOptimistic && (
+          <>
+            {/* TODO: fix flickering */}
+            {/* {currentThread?.liveState === "streaming" && (
+              <StreamLiveStatePending />
+            )} */}
+            {currentThread?.liveState === "error" && (
+              <StreamLiveStateError reload={reload} />
+            )}
+          </>
+        )}
         <div className="aria-hidden h-40" ref={endRef}></div>
       </div>
 
@@ -230,6 +248,32 @@ const LoadingChatPlaceholder = () => {
     <div className="flex flex-col items-center justify-center py-12 text-center">
       <BotIcon className="h-12 w-12 text-muted mb-4" />
       <h2 className="text-lg font-semibold mb-2 text-muted">Loading...</h2>
+    </div>
+  );
+};
+
+const StreamLiveStatePending = () => {
+  return (
+    <div className="flex flex-col items-center justify-center py-12 text-center">
+      <BotIcon className="h-12 w-12 text-muted mb-4" />
+      <h2 className="text-lg font-semibold mb-2 text-muted">
+        We are resuming your stream, please wait...
+      </h2>
+      <LoaderAnimation />
+    </div>
+  );
+};
+
+const StreamLiveStateError = ({ reload }: { reload: () => void }) => {
+  return (
+    <div className="flex flex-col items-center justify-center py-12 text-center">
+      <BotIcon className="h-12 w-12 text-muted mb-4" />
+      <h2 className="text-lg font-semibold mb-2 text-muted">
+        Sorry, something went wrong. Please try again.
+      </h2>
+      <Button variant="outline" onClick={reload}>
+        Try again
+      </Button>
     </div>
   );
 };
