@@ -117,7 +117,7 @@ export function ChatSidebar() {
       <SidebarContent className="p-2">
         <SidebarGroup>
           <SidebarGroupLabel className="text-xs font-medium p-1 flex items-center gap-2">
-            Previous Threads ({status})
+            Previous Threads
           </SidebarGroupLabel>
 
           <div className="space-y-1 mt-2">

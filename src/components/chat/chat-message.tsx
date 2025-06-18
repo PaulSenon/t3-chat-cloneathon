@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/ui/copy-button";
@@ -360,39 +360,43 @@ const ReasoningBlock = ({
   messageId?: string;
   showRaw: boolean;
 }) => {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(true);
+
+  useEffect(() => {
+    setIsOpen(isLoading);
+  }, [isLoading]);
 
   // TODO: collect timestamp
   const [thinkingTime] = useState(Math.floor(Math.random() * 5) + 2); // Random
   // 2-6 seconds
 
-  // Loading state - disabled and shows loading indicator
-  if (isLoading) {
-    return (
-      <div className={cn("p-3", className)}>
-        <div className="flex items-center gap-2">
-          <BrainIcon className="h-4 w-4 animate-pulse" />
-          <LoaderAnimation />
-        </div>
-      </div>
-      // <div
-      //   className={cn(
-      //     "rounded-lg border border-transparent bg-transparent p-3",
-      //     className
-      //   )}
-      // >
-      //   <div className="flex items-center gap-2 text-muted-foreground">
-      //     <BrainIcon className="h-4 w-4 animate-pulse" />
-      //     <span className="text-sm">Reasoning</span>
-      //     <div className="ml-auto flex items-center space-x-1">
-      //       <div className="w-1 h-1 bg-muted-foreground/60 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-      //       <div className="w-1 h-1 bg-muted-foreground/60 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-      //       <div className="w-1 h-1 bg-muted-foreground/60 rounded-full animate-bounce"></div>
-      //     </div>
-      //   </div>
-      // </div>
-    );
-  }
+  // // Loading state - disabled and shows loading indicator
+  // if (isLoading) {
+  //   return (
+  //     <div className={cn("p-3", className)}>
+  //       <div className="flex items-center gap-2">
+  //         <BrainIcon className="h-4 w-4 animate-pulse" />
+  //         <LoaderAnimation />
+  //       </div>
+  //     </div>
+  //     // <div
+  //     //   className={cn(
+  //     //     "rounded-lg border border-transparent bg-transparent p-3",
+  //     //     className
+  //     //   )}
+  //     // >
+  //     //   <div className="flex items-center gap-2 text-muted-foreground">
+  //     //     <BrainIcon className="h-4 w-4 animate-pulse" />
+  //     //     <span className="text-sm">Reasoning</span>
+  //     //     <div className="ml-auto flex items-center space-x-1">
+  //     //       <div className="w-1 h-1 bg-muted-foreground/60 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+  //     //       <div className="w-1 h-1 bg-muted-foreground/60 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+  //     //       <div className="w-1 h-1 bg-muted-foreground/60 rounded-full animate-bounce"></div>
+  //     //     </div>
+  //     //   </div>
+  //     // </div>
+  //   );
+  // }
 
   // Interactive collapsible state
   return (
@@ -410,8 +414,8 @@ const ReasoningBlock = ({
           className="w-full justify-start gap-2 p-3 h-auto text-left hover:bg-muted/50 transition-colors"
         >
           <BrainIcon className="h-4 w-4 text-muted-foreground" />
-          <span className="text-sm text-muted-foreground">
-            Thought for {thinkingTime} sec
+          <span className="text-sm text-muted-foreground flex items-center gap-1">
+            {isLoading ? "Thinking..." : `Thought for ${thinkingTime} sec`}
           </span>
           <ChevronDown
             className={cn(
