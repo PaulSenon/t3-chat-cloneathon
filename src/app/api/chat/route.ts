@@ -14,7 +14,7 @@ import { generateChatTitle } from "@/backend/chatTitleGeneration";
 import z from "zod";
 import { modelsConfig } from "@/types/aiModels";
 
-export const maxDuration = 30;
+export const maxDuration = 60;
 
 const bodySchema = z.object({
   message: z
