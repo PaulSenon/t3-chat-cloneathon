@@ -171,7 +171,7 @@ export const getChat = queryWithRLS({
   },
 });
 
-type ThreadForListing = Omit<Doc<"threads">, "messages" | "metadata">;
+export type ThreadForListing = Omit<Doc<"threads">, "messages" | "metadata">;
 
 export const getUserThreadsForListing = queryWithRLS({
   args: {

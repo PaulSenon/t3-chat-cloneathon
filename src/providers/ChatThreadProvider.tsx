@@ -20,6 +20,8 @@ import {
 import superjson from "superjson";
 import { defaultModelId, Model } from "@/types/aiModels";
 import { ChatBody } from "@/app/api/chat/route";
+import { useChatListActions } from "./ChatListStateProvider";
+
 interface ChatThreadActions {
   handleInputChange: UseChatHelpers["handleInputChange"];
   handleSubmit: UseChatHelpers["handleSubmit"];
@@ -60,7 +62,7 @@ export function ChatThreadProvider({
 }) {
   // const { isAnonymous } = useAuth();
   const actions = useChatActions();
-
+  const { mutateOptimistic } = useChatListActions();
   // // fetch the current thread (only if we have an id (not on /chat))
   // const { data: currentThread, isStale } = useColdCachedQuery(
   //   // const isStale = false;
@@ -162,47 +164,47 @@ export function ChatThreadProvider({
     chatHandleInputChange(e); // update the chat
   };
 
-  const createThreadOptimistic = useMutation(
-    api.chat.createChat
-  ).withOptimisticUpdate((localStore, mutationArgs) => {
-    insertAtTop({
-      paginatedQuery: api.chat.getUserThreadsForListing,
-      argsToMatch: {}, // same args as in the sidebar
-      localQueryStore: localStore,
-      item: {
-        _id: crypto.randomUUID() as Id<"threads">,
-        uuid: mutationArgs.uuid,
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-        status: "active",
-        liveState: "pending",
-        title: undefined,
-        userId: crypto.randomUUID() as Id<"users">,
-        lastUsedModelId: selectedModel?.id ?? defaultModelId,
-        _creationTime: Date.now(),
-      },
-    });
-  });
-  const updateThreadOptimistic = useMutation(
-    api.chat.patchChat
-  ).withOptimisticUpdate((localStore, mutationArgs) => {
-    optimisticallyUpdateValueInPaginatedQuery(
-      localStore,
-      api.chat.getUserThreadsForListing,
-      {},
-      (currentValue) => {
-        if (mutationArgs.id === currentValue._id) {
-          return {
-            ...currentValue,
-            liveState: mutationArgs.liveState ?? currentValue.liveState,
-            lastUsedModelId:
-              mutationArgs.lastUsedModelId ?? currentValue.lastUsedModelId,
-          };
-        }
-        return currentValue;
-      }
-    );
-  });
+  // const createThreadOptimistic = useMutation(
+  //   api.chat.createChat
+  // ).withOptimisticUpdate((localStore, mutationArgs) => {
+  //   insertAtTop({
+  //     paginatedQuery: api.chat.getUserThreadsForListing,
+  //     argsToMatch: {}, // same args as in the sidebar
+  //     localQueryStore: localStore,
+  //     item: {
+  //       _id: crypto.randomUUID() as Id<"threads">,
+  //       uuid: mutationArgs.uuid,
+  //       createdAt: Date.now(),
+  //       updatedAt: Date.now(),
+  //       status: "active",
+  //       liveState: "pending",
+  //       title: undefined,
+  //       userId: crypto.randomUUID() as Id<"users">,
+  //       lastUsedModelId: selectedModel?.id ?? defaultModelId,
+  //       _creationTime: Date.now(),
+  //     },
+  //   });
+  // });
+  // const updateThreadOptimistic = useMutation(
+  //   api.chat.patchChat
+  // ).withOptimisticUpdate((localStore, mutationArgs) => {
+  //   optimisticallyUpdateValueInPaginatedQuery(
+  //     localStore,
+  //     api.chat.getUserThreadsForListing,
+  //     {},
+  //     (currentValue) => {
+  //       if (mutationArgs.id === currentValue._id) {
+  //         return {
+  //           ...currentValue,
+  //           liveState: mutationArgs.liveState ?? currentValue.liveState,
+  //           lastUsedModelId:
+  //             mutationArgs.lastUsedModelId ?? currentValue.lastUsedModelId,
+  //         };
+  //       }
+  //       return currentValue;
+  //     }
+  //   );
+  // });
   // const standaloneOptimisticUpdate = useStandaloneOptimisticUpdate();
   // const updateLocalThreadOptimistic = standaloneOptimisticUpdate(
   //   api.chat.patchChat,
@@ -229,16 +231,51 @@ export function ChatThreadProvider({
     e?.preventDefault?.();
     actions.handleSubmit();
     if (currentThreadId && isNewThread) {
-      createThreadOptimistic({
-        uuid: currentThreadId,
-        messages: superjson.stringify(messages),
+      // createThreadOptimistic({
+      //   uuid: currentThreadId,
+      //   messages: superjson.stringify(messages),
+      // });
+      mutateOptimistic({
+        mutate: (items) => {
+          return [
+            {
+              _id: crypto.randomUUID() as Id<"threads">,
+              uuid: currentThreadId,
+              createdAt: Date.now(),
+              updatedAt: Date.now(),
+              status: "active",
+              liveState: "pending",
+              title: undefined,
+              userId: crypto.randomUUID() as Id<"users">,
+              lastUsedModelId: selectedModel?.id ?? defaultModelId,
+              _creationTime: Date.now(),
+            },
+            ...items,
+          ];
+        },
+        match: (item) => item.uuid === currentThreadId,
       });
     } else if (currentThread) {
       // TODO: find a way to not race with server... in case of error we are overriding it.
-      updateThreadOptimistic({
-        id: currentThread?._id,
-        liveState: "pending",
-        lastUsedModelId: selectedModel?.id ?? defaultModelId,
+      // updateThreadOptimistic({
+      //   id: currentThread?._id,
+      //   liveState: "pending",
+      //   lastUsedModelId: selectedModel?.id ?? defaultModelId,
+      // });
+      mutateOptimistic({
+        mutate: (items) => {
+          return items.map((item) => {
+            if (item._id === currentThread._id) {
+              return {
+                ...item,
+                liveState: "pending",
+                lastUsedModelId: selectedModel?.id ?? defaultModelId,
+              };
+            }
+            return item;
+          });
+        },
+        match: (item) => item._id === currentThread._id,
       });
     }
     chatHandleSubmit(e);

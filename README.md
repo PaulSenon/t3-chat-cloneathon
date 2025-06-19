@@ -33,19 +33,22 @@ This project leverages a modern, type-safe, and scalable technology stack.
 ## 🚧 Roadmap
 
 Didn't had time to implement but wanted to:
+*So I might work on this in the future after the competition*
 
 - [ ] smooth streaming
-- [ ] stream error handling
+- [ ] stream error/abort handling (with retry)
 - [ ] input save per thread (in case of error, page reload etc)
-- [ ] code colorization
-- [ ] thread renaming
+- [ ] schema refactoring to have messages as a separate table
+- [ ] code colorization (as a lazy progressive enhancement on top of markdown)
+- [ ] markdown **stream rendering** & caching for smooth render of streaming responses & super fast rendering of cached responses
+- [ ] thread rename/pin
 - [ ] stream resumability
-- [ ] favorite threads
-- [ ] web search
-- [ ] better optimized Markdown rendering
-- [ ] public shared threads
+- [ ] web search capabilities
+- [ ] public shared threads (as a static page for snappy sharing)
 - [ ] common primitive widget tool (llm) to display data (list, images, etc)
+- [ ] auto mode (that take the best llm for the task based on context, prices, context size, etc)
 - [ ] clean my absolute mess of a codebase because I rushed it
+    - [ ] build a better useQuery wrapper with both stale (cold caching) and optimistic updates locally (without optimistic mutation to avoid race mutation when need optimistic updates on queries that should be done on api route)
 
 ## 🏛️ Architecture Highlights
 

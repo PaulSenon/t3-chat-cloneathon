@@ -215,12 +215,12 @@ export const registry = createProviderRegistry({
           model: anthropic("claude-4-sonnet-20250514"),
           middleware: defaultSettingsMiddleware({
             settings: {
-              maxTokens: 5000, // example default setting
+              maxTokens: 6000, // example default setting
               providerMetadata: {
                 anthropic: {
                   thinking: {
                     type: "enabled",
-                    budgetTokens: 5000,
+                    budgetTokens: 3000,
                   },
                 } satisfies AnthropicProviderOptions,
               },
@@ -249,13 +249,13 @@ export const registry = createProviderRegistry({
         model: google("gemini-2.5-pro-preview-05-06"),
         middleware: defaultSettingsMiddleware({
           settings: {
-            maxTokens: 5000,
+            maxTokens: 10000,
             providerMetadata: {
               google: {
                 responseModalities: ["TEXT"],
                 thinkingConfig: {
                   includeThoughts: true,
-                  thinkingBudget: 5000,
+                  thinkingBudget: 3000,
                 },
               } satisfies GoogleGenerativeAIProviderOptions,
             },
