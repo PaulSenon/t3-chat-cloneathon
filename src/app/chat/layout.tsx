@@ -4,7 +4,6 @@ import { ChatSidebar } from "@/components/chat/chat-sidebar";
 import { ChatStateProvider } from "@/providers/ChatStateProvider";
 import { LocalCacheProvider } from "@/providers/LocalCacheProvider";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { ChatListStateProvider } from "@/providers/ChatListStateProvider";
 
 export default function ChatLayout({
   children,
@@ -12,12 +11,16 @@ export default function ChatLayout({
   children: React.ReactNode;
 }) {
   return (
-    <>
-      <ChatSidebar />
-      <main className="relative group/sidebar-wrapper flex-1 min-w-0 w-full">
-        <SidebarTrigger className="fixed left-3 top-3 z-50 flex p-4 bg-background-transparent top-safe-offset-2" />
-        {children}
-      </main>
-    </>
+    <TooltipProvider delayDuration={0} skipDelayDuration={0}>
+      <LocalCacheProvider>
+        <ChatStateProvider>
+          <ChatSidebar />
+          <main className="relative group/sidebar-wrapper flex-1 min-w-0 w-full">
+            <SidebarTrigger className="fixed left-3 top-3 z-50 flex p-4 bg-background-transparent top-safe-offset-2" />
+            {children}
+          </main>
+        </ChatStateProvider>
+      </LocalCacheProvider>
+    </TooltipProvider>
   );
 }
