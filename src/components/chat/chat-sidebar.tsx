@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 import {
   Sidebar,
@@ -9,6 +9,7 @@ import {
   SidebarGroup,
   SidebarHeader,
   SidebarGroupLabel,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { UserProfileButton } from "../auth/user-avatar";
 import { Separator } from "../ui/separator";
@@ -23,10 +24,6 @@ import {
   useMutation,
 } from "convex/react";
 import { Doc } from "../../../convex/_generated/dataModel";
-import {
-  useChatListActions,
-  useChatListState,
-} from "@/providers/ChatListStateProvider";
 
 type ThreadItem = Omit<Doc<"threads">, "messages" | "metadata">;
 
@@ -69,21 +66,14 @@ export function ChatSidebar() {
   const actions = useChatActions();
 
   // Get real threads from Convex (RLS automatically filters to current user)
-  // const { isLoading, isStale, loadMore, results, status } =
-  //   useColdCachedPaginatedQuery(
-  //     api.chat.getUserThreadsForListing,
-  //     {},
-  //     {
-  //       initialNumItems: 50,
-  //     }
-  //   );
-  const {
-    isLoading,
-    isStale,
-    paginatedThreads: results,
-    status,
-  } = useChatListState();
-  const { loadMore } = useChatListActions();
+  const { isLoading, isStale, loadMore, results, status } =
+    useColdCachedPaginatedQuery(
+      api.chat.getUserThreadsForListing,
+      {},
+      {
+        initialNumItems: 50,
+      }
+    );
   const isExhausted = status === "Exhausted";
 
   // Add intersection trigger for infinite scroll
@@ -262,9 +252,6 @@ function ThreadItem({
     console.log("Pin thread:", thread.uuid);
   };
 
-  const disableActions =
-    isStale || liveState === "pending" || liveState === "streaming";
-
   return (
     <div
       className={cn(
@@ -286,7 +273,7 @@ function ThreadItem({
         </div>
 
         {/* Context Actions - Hidden by default, shown on hover */}
-        {!disableActions && (
+        {!isStale && (
           <div className="pointer-events-auto absolute -right-1 bottom-0 top-0 z-50 flex translate-x-full items-center justify-end text-muted-foreground transition-transform group-hover/link:translate-x-0 group-hover/link:bg-accent">
             {/* Gradient overlay for smooth visual transition */}
             <div className="pointer-events-none absolute bottom-0 right-[100%] top-0 h-full w-8 bg-gradient-to-l from-accent to-transparent opacity-0 group-hover/link:opacity-100 transition-opacity" />
@@ -310,7 +297,7 @@ function ThreadItem({
               onClick={handleDelete}
               aria-label="Delete thread"
               type="button"
-              disabled={disableActions}
+              disabled={isStale}
             >
               <X className="size-4" />
             </button>
