@@ -77,19 +77,12 @@ export async function POST(req: Request) {
   console.log("🔍 Received message:", message.id);
 
   // load the previous messages from the server or create a new thread:
-  const existingThread = await fetchQuery(
-    api.chat.getChat,
+  const thread = await fetchMutation(
+    api.chat.ensureChat,
     { uuid: id },
     { token }
   );
 
-  const thread =
-    existingThread ??
-    (await fetchMutation(
-      api.chat.createChat,
-      { uuid: id, messages: superjson.stringify([message]) },
-      { token }
-    ));
   // const thread =
   //   // TODO create a appendNewMessages to add the user one asap
   //   (await fetchQuery(api.chat.getChat, { uuid: id }, { token })) ??
@@ -148,7 +141,7 @@ export async function POST(req: Request) {
     )
   );
 
-  if (!existingThread || !existingThread.title) {
+  if (!thread.title) {
     deferredPromiseChain.finally(() =>
       generateChatTitle(messages).then((title) => {
         console.log("🔍 Generated title:", title);

@@ -28,27 +28,25 @@ export const saveChat = mutationWithRLS({
   },
 });
 
-export const createChat = mutationWithRLS({
+export const ensureChat = mutationWithRLS({
   args: {
     uuid: v.string(),
-    messages: v.string(),
   },
   handler: async (ctx, args) => {
     const user = await INTERNAL_getCurrentUserOrThrow(ctx);
 
-    // ensure the thread does not exist
+    // check if the thread exists
     const existingThread = await ctx.db
       .query("threads")
       .withIndex("byUuid", (q) => q.eq("uuid", args.uuid))
       .unique();
-    if (existingThread) {
-      throw new ConvexError("Thread already exists");
-    }
+    if (existingThread) return existingThread;
 
+    // create the thread otherwise
     const now = Date.now();
     const threadId = await ctx.db.insert("threads", {
       uuid: args.uuid,
-      messages: args.messages,
+      messages: "",
       createdAt: now,
       updatedAt: now,
       userId: user._id,
@@ -58,7 +56,7 @@ export const createChat = mutationWithRLS({
 
     const thread = await ctx.db.get(threadId);
     if (!thread) {
-      return null;
+      throw new ConvexError("Failed creating new thread");
     }
 
     return thread;

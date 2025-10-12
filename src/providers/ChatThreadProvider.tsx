@@ -163,7 +163,7 @@ export function ChatThreadProvider({
   };
 
   const createThreadOptimistic = useMutation(
-    api.chat.createChat
+    api.chat.ensureChat
   ).withOptimisticUpdate((localStore, mutationArgs) => {
     insertAtTop({
       paginatedQuery: api.chat.getUserThreadsForListing,
@@ -231,7 +231,6 @@ export function ChatThreadProvider({
     if (currentThreadId && isNewThread) {
       createThreadOptimistic({
         uuid: currentThreadId,
-        messages: superjson.stringify(messages),
       });
     } else if (currentThread) {
       // TODO: find a way to not race with server... in case of error we are overriding it.
