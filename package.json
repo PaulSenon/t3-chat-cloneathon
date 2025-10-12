@@ -9,10 +9,13 @@
   },
   "type": "module",
   "scripts": {
-    "dev": "next dev --turbopack",
+    "dev": "pnpm run dev:backend & pnpm run dev:frontend",
+    "dev:frontend": "pnpm exec next dev --turbopack",
+    "dev:backend": "pnpm exec convex dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "clean": "rimraf node_modules && rimraf .next && rimraf .vercel"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^1.2.12",
@@ -93,9 +96,11 @@
     "autoprefixer": "^10.4.21",
     "eslint": "^9",
     "eslint-config-next": "15.4.0-canary.71",
+    "opencode-ai": "^0.15.0",
     "postcss": "^8.5.4",
+    "rimraf": "^6.0.1",
     "tw-animate-css": "^1.3.4",
     "typescript": "^5"
   },
-  "packageManager": "pnpm@9.0.0"
+  "packageManager": "pnpm@10.18.2+sha512.9fb969fa749b3ade6035e0f109f0b8a60b5d08a1a87fdf72e337da90dcc93336e2280ca4e44f2358a649b83c17959e9993e777c2080879f3801e6f0d999ad3dd"
 }

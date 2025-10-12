@@ -8,6 +8,10 @@ RUN apt-get update && \
   apt-get clean && \
   rm -rf /var/lib/apt/lists/*
 
+RUN npm i -g @anthropic-ai/claude-code
+RUN npm i -g opencode-ai@latest
+RUN npm i -g @openai/codex@latest
+
 COPY package.json .
 COPY pnpm-lock.yaml .
 

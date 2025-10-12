@@ -1,0 +1,295 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+
+  // ===========================================================================
+  // OpenCode Project Configuration Template
+  // ===========================================================================
+  // This file provides commented examples of ALL available configuration
+  // options. Uncomment and modify sections as needed for this project.
+  // Project config overrides global config (~/.config/opencode/opencode.jsonc)
+  // ===========================================================================
+
+  // --- TUI -------------------------------------------------------------------
+  // Terminal UI specific settings
+  // "tui": {
+  //   "scroll_speed": 3,
+  //   "focus_follows_mouse": false
+  // },
+
+  // --- Tools -----------------------------------------------------------------
+  // Control which tools the LLM can use
+  // "tools": {
+  //   "write": true,      // Allow creating/overwriting files
+  //   "edit": true,       // Allow editing existing files
+  //   "read": true,       // Allow reading files
+  //   "bash": true,       // Allow running bash commands
+  //   "list": true,       // Allow listing directories
+  //   "glob": true,       // Allow file pattern matching
+  //   "grep": true,       // Allow content search
+  //   "task": true,       // Allow launching sub-agents
+  //   "webfetch": true,   // Allow fetching web content
+  //   "todowrite": true,  // Allow writing todos
+  //   "todoread": true    // Allow reading todos
+  // },
+
+  // --- Models & Providers ----------------------------------------------------
+  // Configure AI models and provider settings
+  // "model": "opencode/qwen-3-coder-32b",
+  // "small_model": "opencode/qwen-3-coder-7b",
+
+  // Configure provider-specific options
+  // "provider": {
+  //   // OpenCode Zen models (recommended)
+  //   "opencode": {
+  //     "models": {
+  //       "qwen-3-coder-32b": {
+  //         "name": "Qwen 3 Coder 32B",
+  //         "options": {
+  //           "temperature": 0.2,
+  //           "maxOutputTokens": 8192
+  //         }
+  //       },
+  //       "qwen-3-coder-7b": {
+  //         "name": "Qwen 3 Coder 7B"
+  //       },
+  //       "claude-sonnet-4": {
+  //         "name": "Claude Sonnet 4"
+  //       }
+  //     },
+  //     "options": {
+  //       "apiKey": "{env:OPENCODE_API_KEY}",
+  //       "baseURL": "https://api.opencode.ai/v1"
+  //     }
+  //   },
+  //   // Example: Anthropic
+  //   "anthropic": {
+  //     "models": {
+  //       "claude-sonnet-4-20250514": {
+  //         "options": {
+  //           "thinking": {
+  //             "type": "enabled",
+  //             "budgetTokens": 16000
+  //           }
+  //         }
+  //       }
+  //     },
+  //     "options": {
+  //       "apiKey": "{env:ANTHROPIC_API_KEY}",
+  //       "baseURL": "https://api.anthropic.com/v1"
+  //     }
+  //   },
+  //   // Example: OpenAI
+  //   "openai": {
+  //     "models": {
+  //       "gpt-5": {
+  //         "options": {
+  //           "reasoningEffort": "high",
+  //           "textVerbosity": "low",
+  //           "reasoningSummary": "auto"
+  //         }
+  //       }
+  //     },
+  //     "options": {
+  //       "apiKey": "{env:OPENAI_API_KEY}"
+  //     }
+  //   },
+  //   // Example: Custom local provider (Ollama/LM Studio)
+  //   "ollama": {
+  //     "npm": "@ai-sdk/openai-compatible",
+  //     "name": "Ollama (local)",
+  //     "options": {
+  //       "baseURL": "http://localhost:11434/v1"
+  //     },
+  //     "models": {
+  //       "llama3": {
+  //         "name": "Llama 3 Local"
+  //       }
+  //     }
+  //   }
+  // },
+
+  // --- Theme -----------------------------------------------------------------
+  // UI theme (inherits from global if not set)
+  // "theme": "opencode",  // or "zen-dark", "zen-light", "github-dark", etc.
+
+  // --- Agents ----------------------------------------------------------------
+  // Define specialized agents for specific tasks
+  // "agent": {
+  //   "code-reviewer": {
+  //     "description": "Reviews code for best practices and potential issues",
+  //     "model": "opencode/qwen-3-coder-14b",
+  //     "prompt": "You are a code reviewer. Focus on security, performance, and maintainability.",
+  //     "tools": {
+  //       "write": false,
+  //       "edit": false
+  //     }
+  //   },
+  //   "test-writer": {
+  //     "description": "Writes comprehensive unit tests",
+  //     "model": "opencode/qwen-3-coder-32b",
+  //     "prompt": "Write thorough unit tests with edge cases.",
+  //     "tools": {
+  //       "write": true,
+  //       "bash": true
+  //     }
+  //   },
+  //   "refactor": {
+  //     "description": "Refactors code for better structure",
+  //     "model": "opencode/claude-sonnet-4",
+  //     "prompt": "Refactor code while maintaining functionality."
+  //   }
+  // },
+
+  // --- Sharing ---------------------------------------------------------------
+  // Control conversation sharing behavior
+  // "share": "manual",    // "manual" (default), "auto", or "disabled"
+
+  // --- Custom Commands -------------------------------------------------------
+  // Define reusable command templates
+  // "command": {
+  //   "test": {
+  //     "template": "Run pnpm test with coverage report and show any failures.\nFocus on the failing tests and suggest fixes.",
+  //     "description": "Run tests with coverage",
+  //     "agent": "test-writer",
+  //     "model": "opencode/qwen-3-coder-7b"
+  //   },
+  //   "component": {
+  //     "template": "Create a new React component named $ARGUMENTS with TypeScript support.\nInclude proper typing and basic structure following project conventions.",
+  //     "description": "Create a new component"
+  //   },
+  //   "lint": {
+  //     "template": "Run the linter and fix all auto-fixable issues.\nReport any remaining issues that need manual attention.",
+  //     "description": "Run linter"
+  //   },
+  //   "build": {
+  //     "template": "Run the build process and fix any errors that occur.",
+  //     "description": "Build the project"
+  //   }
+  // },
+
+  // --- Keybinds --------------------------------------------------------------
+  // Customize keyboard shortcuts
+  // "keybinds": {
+  //   "global": {
+  //     "toggle_control_panel": ["ctrl", "shift", "p"],
+  //     "new_chat": ["ctrl", "n"],
+  //     "search": ["ctrl", "f"]
+  //   },
+  //   "chat": {
+  //     "send_message": ["enter"],
+  //     "multiline": ["shift", "enter"],
+  //     "cancel": ["escape"]
+  //   }
+  // },
+
+  // --- Autoupdate ------------------------------------------------------------
+  // Control automatic updates
+  // "autoupdate": true,  // Set to false to disable auto-updates
+
+  // --- Formatters ------------------------------------------------------------
+  // Configure code formatters
+  // "formatter": {
+  //   "prettier": {
+  //     "disabled": false
+  //   },
+  //   "custom-prettier": {
+  //     "command": ["pnpm", "prettier", "--write", "$FILE"],
+  //     "environment": {
+  //       "NODE_ENV": "development"
+  //     },
+  //     "extensions": [".ts", ".tsx", ".js", ".jsx", ".json", ".md"]
+  //   },
+  //   "eslint": {
+  //     "command": ["pnpm", "eslint", "--fix", "$FILE"],
+  //     "extensions": [".ts", ".tsx", ".js", ".jsx"]
+  //   },
+  //   "black": {
+  //     "command": ["black", "$FILE"],
+  //     "extensions": [".py"]
+  //   }
+  // },
+
+  // --- Permissions -----------------------------------------------------------
+  // Control tool permissions (default: all allowed)
+  // "permission": {
+  //   "write": "allow",    // "allow", "deny", or "ask"
+  //   "edit": "allow",
+  //   "bash": "ask",       // Require approval for bash commands
+  //   "read": "allow",
+  //   "list": "allow",
+  //   "glob": "allow",
+  //   "grep": "allow",
+  //   "task": "allow",
+  //   "webfetch": "ask",   // Require approval for web fetches
+  //   "todowrite": "allow",
+  //   "todoread": "allow"
+  // },
+
+  // --- MCP Servers -----------------------------------------------------------
+  // Configure Model Context Protocol servers
+  "mcp": {
+    "context7": {
+      "type": "remote",
+      "url": "https://mcp.context7.com/mcp",
+      "headers": {
+        "CONTEXT7_API_KEY": "{env:CONTEXT7_API_KEY}"
+      },
+      "enabled": true
+    }
+  //   "local-json-tools": {
+  //     "command": "mcp-local-json",
+  //     "args": ["--path", "./mcp-config.json"]
+  //   },
+  //   "filesystem": {
+  //     "command": "npx",
+  //     "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/allowed/files"]
+  //   },
+  //   "github": {
+  //     "command": "npx",
+  //     "args": ["-y", "@modelcontextprotocol/server-github"],
+  //     "environment": {
+  //       "GITHUB_PERSONAL_ACCESS_TOKEN": "{env:GITHUB_TOKEN}"
+  //     }
+  //   }
+  },
+
+  // --- Instructions ----------------------------------------------------------
+  // Include instruction files for the model
+  // "instructions": [
+  //   ".cursor/rules/*.md",
+  //   ".cursor/rules/**/*.mdc",
+  //   "docs/CONTRIBUTING.md",
+  //   "docs/ARCHITECTURE.md",
+  //   ".github/CODING_STANDARDS.md"
+  // ],
+
+  // --- Disabled Providers ----------------------------------------------------
+  // Disable specific providers even if credentials are available
+  "disabled_providers": [
+    "openai",
+    "anthropic",
+    "google"
+  ]
+
+  // ===========================================================================
+  // Variable Substitution Examples
+  // ===========================================================================
+  // Environment variables: {env:VARIABLE_NAME}
+  // File contents: {file:path/to/file}
+  //
+  // Examples:
+  // "model": "{env:OPENCODE_MODEL}",
+  // "provider": {
+  //   "opencode": {
+  //     "options": {
+  //       "apiKey": "{file:~/.secrets/opencode-key}"
+  //     }
+  //   }
+  // }
+  // ===========================================================================
+
+  // --- Project-Specific Overrides --------------------------------------------
+  // Add your project-specific configuration below
+  // These will override global settings
+
+}
