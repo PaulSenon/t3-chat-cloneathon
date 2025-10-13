@@ -3,6 +3,7 @@
 /.pnp
 .pnp.js
 .pnpm-store/
+.swc/
 
 # Production builds
 /.next/

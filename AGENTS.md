@@ -1,0 +1,18 @@
+# AGENTS GUIDE
+- use context7 to fetch doc before using any library or doing important refactoring.
+- use fetch for web search when you and and fallback on firecrawl when needing some more advanced search-engine powered web searches.
+- Build: run `pnpm run build` from repo root (already in-container).
+- Lint: run `pnpm run lint`; treat warnings as errors.
+- Ignore Makefile/docker helpers; they exist solely for host drives.
+- Stack: AI SDK v4 + React 19 + Convex targeting buttery smooth UX.
+- Treat repo as prototype; expect rough edges and noisy legacy docs.
+- Roadmap: migrate toward AI SDK v5 when viable.
+- Frontend: explore TanStack Start or Astro CSR/static pathways.
+- Structure: evolve into monorepo with shared internal packages.
+- API: implement oRPC specs, share handlers across Hono + Convex.
+- UI: upgrade to Shadcn v3 and Vercel AI elements with light styling.
+- Data: refactor Convex schema for long-term stability.
+- Models: extend provider registry to every major LLM.
+- Deployment: split SSR on Vercel, client/API on Cloudflare workers.
+- Streaming: add resumability, abort controllers, richer LLM UX tooling.
+- Imports: React/Next → third-party → aliases → components → Convex; enforce no `any`, wrap async in try/catch, validate env with `@t3-oss/env-nextjs`.
