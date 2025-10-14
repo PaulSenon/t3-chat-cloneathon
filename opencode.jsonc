@@ -33,6 +33,11 @@
         "FIRECRAWL_CREDIT_WARNING_THRESHOLD": "500",
         "FIRECRAWL_CREDIT_CRITICAL_THRESHOLD": "100"
       }
+    },
+    "shadcn": {
+      "type": "local",
+      "command": ["npx", "shadcn@latest", "mcp"],
+      "enabled": true
     }
   },
 

@@ -2,11 +2,10 @@
 - IMPORTANT: When reporting information to me, be extremely concise and sacrifice grammar for the sake of concision.
 - use context7 to fetch doc before using any library or doing important refactoring.
 - Build: run `pnpm run build` from repo root (already in-container).
-- Lint: run `pnpm run lint`; treat warnings as errors.
+- Lint/types/checks: run `pnpm run quality`; treat warnings as errors.
 - Ignore Makefile/docker helpers; they exist solely for host drives.
-- Stack: AI SDK v4 + React 19 + Convex targeting buttery smooth UX.
+- Stack: AI SDK v5 + React 19 + Convex targeting buttery smooth UX.
 - Treat repo as prototype; expect rough edges and noisy legacy docs.
-- Roadmap: migrate toward AI SDK v5 when viable.
 - Frontend: explore TanStack Start or Astro CSR/static pathways.
 - Structure: evolve into monorepo with shared internal packages.
 - API: implement oRPC specs, share handlers across Hono + Convex.

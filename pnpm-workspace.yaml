@@ -1,2 +1,5 @@
 ignoredBuiltDependencies:
   - opencode-ai
+
+onlyBuiltDependencies:
+  - esbuild
