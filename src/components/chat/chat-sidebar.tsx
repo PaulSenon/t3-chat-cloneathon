@@ -9,14 +9,13 @@ import {
   SidebarGroup,
   SidebarHeader,
   SidebarGroupLabel,
-  useSidebar,
 } from "@/components/ui/sidebar";
 import { UserProfileButton } from "../auth/user-avatar";
 import { Separator } from "../ui/separator";
 import { Button } from "../ui/button";
 import { api } from "../../../convex/_generated/api";
 import { Skeleton } from "@/components/ui/skeleton";
-import { MessageCircle, Pin, X, Plus } from "lucide-react";
+import { MessageCircle, X, Plus } from "lucide-react";
 import { useChatActions, useChatState } from "@/providers/ChatStateProvider";
 import { useColdCachedPaginatedQuery } from "@/hooks/useColdCachedQuery";
 import {
@@ -247,10 +246,10 @@ function ThreadItem({
     deleteThread({ threadId: thread._id });
   };
 
-  const handlePin = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    console.log("Pin thread:", thread.uuid);
-  };
+  // const handlePin = (e: React.MouseEvent) => {
+  //   e.stopPropagation();
+  //   console.log("Pin thread:", thread.uuid);
+  // };
 
   return (
     <div

@@ -1,6 +1,6 @@
 # AGENTS GUIDE
+- IMPORTANT: When reporting information to me, be extremely concise and sacrifice grammar for the sake of concision.
 - use context7 to fetch doc before using any library or doing important refactoring.
-- use fetch for web search when you and and fallback on firecrawl when needing some more advanced search-engine powered web searches.
 - Build: run `pnpm run build` from repo root (already in-container).
 - Lint: run `pnpm run lint`; treat warnings as errors.
 - Ignore Makefile/docker helpers; they exist solely for host drives.

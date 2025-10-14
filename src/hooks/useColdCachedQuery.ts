@@ -98,10 +98,10 @@ export function useColdCachedPaginatedQuery<
   }, [remotePaginatedData, cache, isSkip, isUserSignedIn]);
 
   // This is a weird bug where the paginated query says Exhausted and isLoading is false, but there is an empty array of results. The results are coming 1ms later but it flickers the "loaded but empty" state of UI. Instead we return stale data if it's available
-  const isPaginatedLoadingBug =
-    !remotePaginatedData.isLoading &&
-    remotePaginatedData.results.length === 0 &&
-    stalePaginatedData !== undefined;
+  // const isPaginatedLoadingBug =
+  //   !remotePaginatedData.isLoading &&
+  //   remotePaginatedData.results.length === 0 &&
+  //   stalePaginatedData !== undefined;
 
   const isRemoteDataLoading = remotePaginatedData.isLoading;
 

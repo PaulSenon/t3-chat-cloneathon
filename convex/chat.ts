@@ -11,6 +11,7 @@ export const saveChat = mutationWithRLS({
     uuid: v.string(),
     messages: v.string(),
     liveState: v.optional(threadLiveStates),
+    lastUsedModelId: v.string(),
   },
   handler: async (ctx, args) => {
     const thread = await ctx.db
@@ -24,6 +25,7 @@ export const saveChat = mutationWithRLS({
     await ctx.db.patch(thread._id, {
       messages: args.messages,
       liveState: args.liveState,
+      lastUsedModelId: args.lastUsedModelId,
     });
   },
 });

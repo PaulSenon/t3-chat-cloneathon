@@ -26,7 +26,6 @@ import { DynamicCustomIcon } from "@/components/icons";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "../ui/skeleton";
 import { Model, ModelCapabilities, modelsConfig } from "@/types/aiModels";
-import { useScrollToBottom } from "@/hooks/use-scroll-to-bottom";
 import { api } from "../../../convex/_generated/api";
 import { useColdCachedQuery } from "@/hooks/useColdCachedQuery";
 

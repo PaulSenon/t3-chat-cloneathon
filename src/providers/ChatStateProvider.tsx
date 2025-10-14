@@ -14,12 +14,7 @@ import { api } from "../../convex/_generated/api";
 import { useColdCachedQuery } from "@/hooks/useColdCachedQuery";
 import { useAuth } from "@/hooks/useAuth";
 import { Doc } from "../../convex/_generated/dataModel";
-import {
-  defaultModelId,
-  getModelById,
-  Model,
-  modelsConfig,
-} from "@/types/aiModels";
+import { defaultModelId, getModelById, Model } from "@/types/aiModels";
 
 interface ChatState {
   currentThreadId: string | undefined;
@@ -223,7 +218,7 @@ export function useChatActions() {
 }
 
 // Helper function
-function extractThreadIdFromPath(pathname: string): string | undefined {
-  const match = pathname.match(/^\/chat\/(.+)$/);
-  return match ? match[1] : undefined;
-}
+// function extractThreadIdFromPath(pathname: string): string | undefined {
+//   const match = pathname.match(/^\/chat\/(.+)$/);
+//   return match ? match[1] : undefined;
+// }

@@ -2,14 +2,7 @@ import "./globals.css";
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import { Providers } from "../providers";
-import { SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
 
-import {
-  SignInButton,
-  // SignOutButton,
-  SignUpButton,
-} from "@/components/auth/auth-button";
-import { Suspense } from "react";
 import { SidebarProvider } from "@/components/ui/sidebar";
 
 const geistSans = Geist({

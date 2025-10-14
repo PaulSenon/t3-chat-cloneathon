@@ -1,15 +1,21 @@
-import { Message, generateObject } from "ai";
+import { UIMessage, generateObject } from "ai";
 import { registry } from "./aiProviderRegistry";
-import { z } from "zod";
+import * as z from "zod";
 
-export async function generateChatTitle(messages: Message[]) {
+export async function generateChatTitle(messages: UIMessage[]) {
+  const messagesString = messages
+    .map(
+      (m) =>
+        `${m.parts.map((p) => (p.type === "text" ? p.text : "")).join("\n")}`
+    )
+    .join("\n");
   console.log(
     "🔍 Generating chat title prompt:",
     `
       Please generate a title for the following conversation:
 
       <conversation>
-      ${messages.map((m) => `${m.content}`).join("\n")}
+      ${messagesString}
       </conversation>
 
       Conversation Title:
@@ -50,7 +56,7 @@ export async function generateChatTitle(messages: Message[]) {
       Please generate a title for the following conversation:
 
       <conversation>
-      ${messages.map((m) => `${m.content}`).join("\n")}
+      ${messagesString}
       </conversation>
 
       Conversation Title:

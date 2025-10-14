@@ -4,7 +4,7 @@ import React, { memo, useState } from "react";
 import ReactMarkdown, { ExtraProps, type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils";
-import { Code, CodeIcon, Copy, ExternalLink, WrapText } from "lucide-react";
+import { Code, ExternalLink, WrapText } from "lucide-react";
 import { Button } from "./button";
 import { CopyButton } from "./copy-button";
 
@@ -16,12 +16,7 @@ interface CodeBlockProps extends ExtraProps {
 /**
  * Simple code block component - no highlighting, just monospace + scrollable
  */
-export function CodeBlock({
-  node,
-  className,
-  children,
-  ...props
-}: CodeBlockProps) {
+export function CodeBlock({ className, children, ...props }: CodeBlockProps) {
   const [wrap, setWrap] = useState(false);
   // Fenced code blocks will have a className like "language-js"
   const match = /language-(\w+)/.exec(className || "");

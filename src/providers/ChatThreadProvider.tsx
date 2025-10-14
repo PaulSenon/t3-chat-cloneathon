@@ -4,34 +4,32 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useState,
 } from "react";
 import { useChatActions } from "./ChatStateProvider";
-import { useChat, UseChatHelpers } from "@ai-sdk/react";
+import { useChat } from "@ai-sdk/react";
 import { parseMessages } from "@/lib/parser";
-import { useColdCachedQuery } from "@/hooks/useColdCachedQuery";
 import { api } from "../../convex/_generated/api";
-import { useAuth } from "@/hooks/useAuth";
 import { Doc, Id } from "../../convex/_generated/dataModel";
 import {
   insertAtTop,
   useMutation,
   optimisticallyUpdateValueInPaginatedQuery,
 } from "convex/react";
-import superjson from "superjson";
 import { defaultModelId, Model } from "@/types/aiModels";
-import { ChatBody } from "@/app/api/chat/route";
+import { ChatStatus, DefaultChatTransport, UIMessage } from "ai";
 interface ChatThreadActions {
-  handleInputChange: UseChatHelpers["handleInputChange"];
-  handleSubmit: UseChatHelpers["handleSubmit"];
-  reload: UseChatHelpers["reload"];
+  handleInputChange: (value: string) => void;
+  handleSubmit: () => void;
+  regenerate: () => void;
 }
 
 interface ChatThreadState {
   isLoading: boolean;
   isStale: boolean;
-  status: UseChatHelpers["status"];
-  messages: UseChatHelpers["messages"];
-  input: UseChatHelpers["input"];
+  status: ChatStatus;
+  messages: UIMessage[];
+  input: string;
 }
 
 interface ChatThreadContextValue {
@@ -90,30 +88,32 @@ export function ChatThreadProvider({
     }
   }, [currentThread]);
 
+  const [input, setInput] = useState("");
   const {
-    input,
-    handleInputChange: chatHandleInputChange,
-    handleSubmit: chatHandleSubmit,
     status,
+    sendMessage,
     messages,
-    setMessages: setChatMessages,
-    reload: chatReload,
+    regenerate: chatRegenerate,
   } = useChat({
-    api: "/api/chat",
     id: currentThreadId, // use the provided chat ID
-    initialMessages, // initial messages if provided
-    sendExtraMessageFields: true, // send id and createdAt for each message
-    experimental_throttle: 50,
+    transport: new DefaultChatTransport({
+      api: "/api/chat",
+      prepareSendMessagesRequest({ messages, id }) {
+        return {
+          body: {
+            id,
+            message: messages.at(-1),
+            selectedModelId: selectedModel?.id ?? defaultModelId,
+          },
+        };
+      },
+    }),
+    messages: initialMessages, // initial messages if provided
+    // experimental_throttle: 50,
     // only send the last message to the server:
     // experimental_prepareRequestBody({ messages, id }) {
     //   return { message: messages[messages.length - 1], id };
     // },
-    experimental_prepareRequestBody: ({ messages, id }) =>
-      ({
-        id,
-        message: messages.at(-1),
-        selectedModelId: selectedModel?.id ?? defaultModelId,
-      }) satisfies ChatBody,
 
     onFinish: (message) => {
       console.log("🔍 Finished message:", message);
@@ -132,11 +132,12 @@ export function ChatThreadProvider({
       // TODO: restore input value
     },
 
-    onResponse: async (response) => {
-      // Handle new thread creation
-      const threadId = response.headers.get("X-Thread-Id");
-      console.log("real threadId from server", threadId);
-    },
+    // TODO: use transient data message from server
+    // onResponse: async (response) => {
+    //   // Handle new thread creation
+    //   const threadId = response.headers.get("X-Thread-Id");
+    //   console.log("real threadId from server", threadId);
+    // },
   });
 
   useEffect(() => {
@@ -157,9 +158,9 @@ export function ChatThreadProvider({
     }
   }, [isNewThread, isLoading, currentThread, currentThreadId, status, actions]);
 
-  const handleInputChange: UseChatHelpers["handleInputChange"] = (e) => {
+  const handleInputChange = (value: string) => {
     actions.handleInputChange();
-    chatHandleInputChange(e); // update the chat
+    setInput(value);
   };
 
   const createThreadOptimistic = useMutation(
@@ -225,8 +226,7 @@ export function ChatThreadProvider({
   //     );
   //   }
   // );
-  const handleSubmit: UseChatHelpers["handleSubmit"] = (e) => {
-    e?.preventDefault?.();
+  const handleSubmit = () => {
     actions.handleSubmit();
     if (currentThreadId && isNewThread) {
       createThreadOptimistic({
@@ -240,12 +240,15 @@ export function ChatThreadProvider({
         lastUsedModelId: selectedModel?.id ?? defaultModelId,
       });
     }
-    chatHandleSubmit(e);
+    if (input.trim()) {
+      sendMessage({ text: input });
+      setInput("");
+    }
   };
 
-  const reload: UseChatHelpers["reload"] = () => {
+  const regenerate = () => {
     // TODO: make sure not duplicated messages
-    return chatReload();
+    return chatRegenerate();
   };
 
   const value: ChatThreadContextValue = {
@@ -259,7 +262,7 @@ export function ChatThreadProvider({
     actions: {
       handleInputChange,
       handleSubmit,
-      reload,
+      regenerate,
     },
   };
   return (

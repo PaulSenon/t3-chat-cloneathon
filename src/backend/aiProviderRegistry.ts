@@ -10,7 +10,6 @@ import {
   defaultSettingsMiddleware,
   wrapLanguageModel,
 } from "ai";
-import { LanguageModelV1, ProviderV1 } from "@ai-sdk/provider";
 import { env } from "@/env";
 
 const anthropic = createAnthropic({
@@ -215,8 +214,8 @@ export const registry = createProviderRegistry({
           model: anthropic("claude-4-sonnet-20250514"),
           middleware: defaultSettingsMiddleware({
             settings: {
-              maxTokens: 5000, // example default setting
-              providerMetadata: {
+              maxOutputTokens: 5000, // example default setting
+              providerOptions: {
                 anthropic: {
                   thinking: {
                     type: "enabled",
@@ -249,8 +248,8 @@ export const registry = createProviderRegistry({
         model: google("gemini-2.5-pro-preview-05-06"),
         middleware: defaultSettingsMiddleware({
           settings: {
-            maxTokens: 5000,
-            providerMetadata: {
+            maxOutputTokens: 5000,
+            providerOptions: {
               google: {
                 responseModalities: ["TEXT"],
                 thinkingConfig: {

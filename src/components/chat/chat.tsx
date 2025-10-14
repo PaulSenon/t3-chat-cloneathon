@@ -16,7 +16,6 @@ import { useScrollToBottom } from "@/hooks/use-scroll-to-bottom";
 import { useEffect, useRef } from "react";
 import { useLayoutEffect } from "react";
 import { Button } from "../ui/button";
-import { LoaderAnimation } from "./chat-message";
 // import { useScrollToBottom } from "@/hooks/use-scroll-to-bottom";
 
 export type OptimisticMessage = UIMessage & {
@@ -31,9 +30,7 @@ const createOptimisticStepStartMessage = (): OptimisticMessage => ({
       type: "step-start",
     },
   ],
-  createdAt: new Date(),
   isOptimistic: true,
-  content: "",
 });
 
 export function Chat() {
@@ -52,7 +49,8 @@ export function Chat() {
     isLoading: isLoadingThreadData,
     status,
   } = useChatThreadState();
-  const { handleInputChange, handleSubmit, reload } = useChatThreadActions();
+  const { handleInputChange, handleSubmit, regenerate } =
+    useChatThreadActions();
 
   const isWaitingForFirstToken =
     status === "submitted" &&
@@ -216,7 +214,7 @@ export function Chat() {
               <StreamLiveStatePending />
             )} */}
             {currentThread?.liveState === "error" && (
-              <StreamLiveStateError reload={reload} />
+              <StreamLiveStateError regenerate={regenerate} />
             )}
           </>
         )}
@@ -226,9 +224,10 @@ export function Chat() {
       <TmpChatInput
         isStale={isStale}
         input={input}
-        onChange={handleInputChange}
+        onChange={(e) => handleInputChange(e.target.value)}
         onSubmit={(e) => {
-          handleSubmit(e);
+          e?.preventDefault?.();
+          handleSubmit();
           scrollToBottomInstant();
         }}
         selectedModel={selectedModel}
@@ -252,26 +251,26 @@ const LoadingChatPlaceholder = () => {
   );
 };
 
-const StreamLiveStatePending = () => {
-  return (
-    <div className="flex flex-col items-center justify-center py-12 text-center">
-      <BotIcon className="h-12 w-12 text-muted mb-4" />
-      <h2 className="text-lg font-semibold mb-2 text-muted">
-        We are resuming your stream, please wait...
-      </h2>
-      <LoaderAnimation />
-    </div>
-  );
-};
+// const StreamLiveStatePending = () => {
+//   return (
+//     <div className="flex flex-col items-center justify-center py-12 text-center">
+//       <BotIcon className="h-12 w-12 text-muted mb-4" />
+//       <h2 className="text-lg font-semibold mb-2 text-muted">
+//         We are resuming your stream, please wait...
+//       </h2>
+//       <LoaderAnimation />
+//     </div>
+//   );
+// };
 
-const StreamLiveStateError = ({ reload }: { reload: () => void }) => {
+const StreamLiveStateError = ({ regenerate }: { regenerate: () => void }) => {
   return (
     <div className="flex flex-col items-center justify-center py-12 text-center">
       <BotIcon className="h-12 w-12 text-muted mb-4" />
       <h2 className="text-lg font-semibold mb-2 text-muted">
         Sorry, something went wrong. Please try again.
       </h2>
-      <Button variant="outline" onClick={reload}>
+      <Button variant="outline" onClick={regenerate}>
         Try again
       </Button>
     </div>

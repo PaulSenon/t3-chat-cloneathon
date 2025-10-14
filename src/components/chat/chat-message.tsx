@@ -12,9 +12,8 @@ import {
   Cog,
   CheckCircle,
   XCircle,
-  Code,
 } from "lucide-react";
-import { UIMessage } from "ai";
+import { SourceUrlUIPart, TextUIPart, ToolUIPart, UIMessage } from "ai";
 import {
   Collapsible,
   CollapsibleContent,
@@ -42,19 +41,19 @@ export const ChatMessage = React.memo(function ChatMessage({
   isStreaming,
 }: ChatMessageProps) {
   const isUser = message.role === "user";
-  const [showRaw, setShowRaw] = useState(false);
+  // const [showRaw, setShowRaw] = useState(false);
   console.log("MESSAGE", message);
 
   /**
    * Format timestamp for display
    */
-  const formatTime = (timestamp: Date) => {
-    return new Intl.DateTimeFormat("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    }).format(timestamp);
-  };
+  // const formatTime = (timestamp: Date) => {
+  //   return new Intl.DateTimeFormat("en-US", {
+  //     hour: "2-digit",
+  //     minute: "2-digit",
+  //     hour12: false,
+  //   }).format(timestamp);
+  // };
 
   return (
     <div className={cn("group flex flex-col", isUser && "items-end")}>
@@ -87,8 +86,7 @@ export const ChatMessage = React.memo(function ChatMessage({
                   <TextBlock
                     key={`${part.type}-${i}`}
                     textPart={part}
-                    messageId={message.id}
-                    showRaw={showRaw}
+                    showRaw={false}
                   />
                 );
               case "step-start":
@@ -99,7 +97,7 @@ export const ChatMessage = React.memo(function ChatMessage({
                     className="w-full"
                   />
                 );
-              case "source":
+              case "source-url":
                 return (
                   <SourceBlock
                     key={`${part.type}-${i}`}
@@ -113,8 +111,7 @@ export const ChatMessage = React.memo(function ChatMessage({
                     key={`${part.type}-${i}`}
                     reasoningPart={part}
                     isLoading={isStreaming && isLastPart}
-                    messageId={message.id}
-                    showRaw={showRaw}
+                    showRaw={false}
                     className="w-full"
                   />
                 );
@@ -167,7 +164,10 @@ const MessageActions = ({
     >
       <div className="flex items-center gap-1">
         <CopyButton
-          text={message.content}
+          text={message.parts
+            .filter((p): p is TextUIPart => p.type === "text")
+            .map((p) => p.text)
+            .join("\n")}
           variant="ghost"
           size="sm"
           className="h-8 w-8 rounded-lg p-0 text-xs hover:bg-muted/40 hover:text-foreground disabled:hover:bg-transparent disabled:hover:text-foreground/50"
@@ -230,11 +230,9 @@ type AnyUIPart = UIMessage["parts"][number];
 
 const TextBlock = ({
   textPart,
-  messageId,
   showRaw,
 }: {
   textPart: AnyUIPart & { type: "text" };
-  messageId?: string;
   showRaw: boolean;
 }) => {
   return (
@@ -265,11 +263,10 @@ const SourceBlock = ({
   sourcePart,
   className,
 }: {
-  sourcePart: AnyUIPart & { type: "source" };
+  sourcePart: SourceUrlUIPart;
   className?: string;
 }) => {
-  const { sourceType, url, title } = sourcePart.source;
-  if (sourceType !== "url") return null;
+  const { url, title } = sourcePart;
 
   return (
     <div
@@ -300,10 +297,10 @@ const ToolInvocationBlock = ({
   toolInvocationPart,
   className,
 }: {
-  toolInvocationPart: AnyUIPart & { type: "tool-invocation" };
+  toolInvocationPart: ToolUIPart;
   className?: string;
 }) => {
-  const { toolName, state: toolState } = toolInvocationPart.toolInvocation;
+  const { type, state: toolState } = toolInvocationPart;
 
   let icon: React.ReactNode;
   let text: string;
@@ -312,20 +309,20 @@ const ToolInvocationBlock = ({
   switch (toolState as string) {
     case "call":
       icon = <Cog className="h-4 w-4 animate-spin" />;
-      text = `Using tool: ${toolName}`;
+      text = `Using tool: ${type}`;
       break;
     case "partial-call":
       icon = <Cog className="h-4 w-4" />;
-      text = `Using tool: ${toolName}`;
+      text = `Using tool: ${type}`;
       break;
     case "result":
       icon = <CheckCircle className="h-4 w-4" />;
-      text = `Tool ${toolName} finished`;
+      text = `Tool ${type} finished`;
       statusClasses = "text-green-600 dark:text-green-500";
       break;
     case "error":
       icon = <XCircle className="h-4 w-4" />;
-      text = `Error in tool: ${toolName}`;
+      text = `Error in tool: ${type}`;
       statusClasses = "text-red-600 dark:text-red-500";
       break;
     default:
@@ -351,13 +348,11 @@ const ReasoningBlock = ({
   className,
   reasoningPart,
   isLoading,
-  messageId,
   showRaw,
 }: {
   className?: string;
   reasoningPart: AnyUIPart & { type: "reasoning" };
   isLoading: boolean;
-  messageId?: string;
   showRaw: boolean;
 }) => {
   const [isOpen, setIsOpen] = useState(true);
@@ -429,9 +424,9 @@ const ReasoningBlock = ({
         <div className="pt-2 border-t border-border/30">
           <div className="prose prose-sm max-w-none dark:prose-invert text-muted-foreground prose-pre:my-0 prose-pre:p-0">
             {showRaw ? (
-              reasoningPart.reasoning
+              reasoningPart.text
             ) : (
-              <Markdown>{reasoningPart.reasoning}</Markdown>
+              <Markdown>{reasoningPart.text}</Markdown>
             )}
           </div>
         </div>

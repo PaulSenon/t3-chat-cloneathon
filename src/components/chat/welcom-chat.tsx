@@ -12,7 +12,6 @@ import { Separator } from "../ui/separator";
 import { ExternalLink } from "lucide-react";
 import { SignInButton, SignUpButton } from "../auth/auth-button";
 import { useAuth } from "@/hooks/useAuth";
-import { Link } from "../ui/markdown";
 
 export const WelcomeChat = () => {
   const { isAnonymous, isLoadingClerk } = useAuth();

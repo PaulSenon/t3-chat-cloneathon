@@ -1,7 +1,7 @@
 import superjson from "superjson";
-import { Message } from "ai";
+import { UIMessage } from "ai";
 
-export function parseMessages(messages: string): Message[] {
+export function parseMessages(messages: string): UIMessage[] {
   try {
     return superjson.parse(messages);
   } catch (e) {
