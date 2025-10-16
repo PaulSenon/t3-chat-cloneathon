@@ -1,10 +1,9 @@
-import { useQuery } from "convex-helpers/react/cache/hooks";
+import { useQuery, usePaginatedQuery } from "convex-helpers/react/cache/hooks";
 import { FunctionReference, FunctionReturnType } from "convex/server";
 import {
   OptionalRestArgsOrSkip,
   PaginatedQueryArgs,
   PaginatedQueryReference,
-  usePaginatedQuery,
   UsePaginatedQueryReturnType,
 } from "convex/react";
 

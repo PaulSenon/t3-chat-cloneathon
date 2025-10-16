@@ -2,6 +2,7 @@
 import { Chat } from "@/components/chat/chat";
 import { useChatState } from "@/providers/ChatStateProvider";
 import { ChatThreadProvider } from "@/providers/ChatThreadProvider";
+import { AIDevtools } from "@ai-sdk-tools/devtools";
 
 // export const dynamic = "force-static";
 export default function ChatPage() {
@@ -13,6 +14,14 @@ export default function ChatPage() {
       {...chatState}
     >
       <Chat />
+      <AIDevtools
+        config={{
+          position: "bottom",
+          theme: "dark",
+          maxEvents: 1000,
+          enabled: true,
+        }}
+      />
     </ChatThreadProvider>
   );
 }

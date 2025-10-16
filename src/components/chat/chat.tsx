@@ -1,6 +1,5 @@
 "use client";
 
-import TmpChatInput from "./tmp-chat-input";
 import { BotIcon } from "lucide-react";
 import { ChatMessage } from "./chat-message";
 import { useChatActions, useChatState } from "@/providers/ChatStateProvider";
@@ -16,6 +15,8 @@ import { useScrollToBottom } from "@/hooks/use-scroll-to-bottom";
 import { useEffect, useRef } from "react";
 import { useLayoutEffect } from "react";
 import { Button } from "../ui/button";
+import ChatInput from "./chat-input";
+import { Model, modelsConfig } from "@/types/aiModels";
 // import { useScrollToBottom } from "@/hooks/use-scroll-to-bottom";
 
 export type OptimisticMessage = UIMessage & {
@@ -221,7 +222,20 @@ export function Chat() {
         <div className="aria-hidden h-40" ref={endRef}></div>
       </div>
 
-      <TmpChatInput
+      <ChatInput
+        handleSubmit={() => {
+          handleSubmit();
+          scrollToBottomInstant();
+        }}
+        handleInputChange={(value) => handleInputChange(value)}
+        text={input}
+        model={selectedModel?.id}
+        setModel={setSelectedModel}
+        models={modelsConfig}
+        textareaRef={undefined}
+      />
+
+      {/* <TmpChatInput
         isStale={isStale}
         input={input}
         onChange={(e) => handleInputChange(e.target.value)}
@@ -237,7 +251,7 @@ export function Chat() {
         onScrollToBottomClick={() => scrollToBottom()}
         isStreaming={status === "streaming" || status === "submitted"}
         disabled={!isFullyReady}
-      />
+      /> */}
     </div>
   );
 }
