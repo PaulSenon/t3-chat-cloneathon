@@ -6,70 +6,18 @@ export const subscriptionTiers = v.union(
   v.literal("premium-level-1")
 );
 
-export const aiModelProviders = v.union(
-  v.literal("openai"),
-  v.literal("anthropic"),
-  v.literal("google")
-);
-export const aiModels = v.string();
-
-export const aiModelCapabilities = v.union(
-  v.literal("text"),
-  v.literal("vision"),
-  v.literal("web"),
-  v.literal("reasoning")
-);
-
-export const aiModelPricing = v.object({
-  permMillionInputTokens: v.number(),
-  permMillionOutputTokens: v.number(),
-});
-
-export const threadLifecycleStatuses = v.union(
+export const lifecycleStates = v.union(
   v.literal("active"),
   v.literal("archived"),
   v.literal("deleted")
 );
 
-export const threadLiveStates = v.union(
+export const liveStatuses = v.union(
   v.literal("pending"),
   v.literal("streaming"),
   v.literal("completed"),
   v.literal("error"),
   v.literal("cancelled")
-);
-
-export const messageLifecycleStatuses = v.union(
-  v.literal("pending"),
-  v.literal("streaming"),
-  v.literal("completed"),
-  v.literal("error"),
-  v.literal("cancelled")
-);
-
-export const aiMessageRoles = v.union(
-  v.literal("user"),
-  v.literal("assistant"),
-  v.literal("system"),
-  v.literal("tool")
-);
-
-// AI SDK v4 compatible message part types
-export const messagePartTypes = v.union(
-  v.literal("text"),
-  v.literal("image"),
-  v.literal("file"),
-  v.literal("tool-call"),
-  v.literal("tool-result"),
-  v.literal("reasoning"), // for reasoning models
-  v.literal("source"), // for source citations
-  v.literal("data") // for custom data parts
-);
-
-// AI SDK v4 tool invocation states
-export const toolInvocationStates = v.union(
-  v.literal("call"),
-  v.literal("result")
 );
 
 export const flexibleMetadata = v.record(v.string(), v.any());
@@ -88,107 +36,58 @@ export default defineSchema({
     .index("byTokenIdentifier", ["tokenIdentifier"])
     .index("byEmail", ["email"]),
 
-  usages: defineTable({
-    userId: v.id("users"),
-    tokenCountTotal: v.number(),
-    tokenCountSinceLastReset: v.number(),
-    messagesCountTotal: v.number(),
-    messagesCountSinceLastReset: v.number(),
-    lastResetDate: v.number(),
-    updatedAt: v.number(),
-  }).index("byUserId", ["userId"]),
-
   threads: defineTable({
     userId: v.id("users"),
     uuid: v.string(),
     title: v.optional(v.string()),
-    status: threadLifecycleStatuses,
-    liveState: threadLiveStates,
+    lifecycleState: lifecycleStates,
+    liveStatus: liveStatuses,
     createdAt: v.number(),
     updatedAt: v.number(),
-    messages: v.string(),
     lastUsedModelId: v.optional(v.string()),
-
-    // AI SDK v4: Enhanced metadata for thread management
-    metadata: v.optional(
-      v.object({
-        lastUsedModel: aiModels,
-        lastUsedProvider: aiModelProviders,
-        messageCount: v.optional(v.number()),
-        totalTokens: v.optional(v.number()),
-        lastMessagePreview: v.optional(v.string()), // For sidebar display
-      })
-    ),
   })
     .index("byUserId", ["userId"])
-    // .index("byParentThreadId", ["parentThreadId"]) // for forking/branching (outside of MVP scope)
-    // .index("byWorkspaceId", ["workspaceId"]) // for future workspace feature (outside of MVP scope)
-    .index("byUserIdUpdatedAt", ["userId", "updatedAt"])
-    .index("byUuid", ["uuid"])
-    .index("byUserIdStatus", ["userId", "status"]),
-  // .index("byWorkspaceIdUpdatedAt", ["workspaceId", "updatedAt"]) // for future workspace feature (outside of MVP scope)
+    .index("byUserIdStateUpdatedAt", ["userId", "lifecycleState", "updatedAt"])
+    .index("byUserIdUuid", ["userId", "uuid"]),
 
-  // aiModels: defineTable({
-  //   name: v.string(),
-  //   provider: aiModelProviders,
-  //   capabilities: v.array(aiModelCapabilities),
-  //   available: v.boolean(),
-  //   pricing: v.optional(aiModelPricing),
-  //   createdAt: v.number(),
-  //   updatedAt: v.number(),
-  // }),
+  // threadMetadata: defineTable({}),
 
-  // TODO: outside of MVP scope
-  // workspaces: defineTable({
-  //   name: v.string(),
-  //   description: v.optional(v.string()),
-  //   userId: v.id("users"),
-  //   // todo: add some workspace-context data
-  //   createdAt: v.number(),
-  //   updatedAt: v.number(),
-  // }).index("byUserId", ["userId"]),
+  messages: defineTable({
+    userId: v.id("users"),
+    threadId: v.id("threads"),
+    uuid: v.string(),
+    role: v.string(),
+    lifecycleState: lifecycleStates,
+    liveStatus: liveStatuses,
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    modelId: v.optional(v.string()),
+  })
+    .index("byUserIdThreadIdUuid", ["userId", "threadId", "uuid"])
+    .index("byUserIdThreadIdCreatedAt", ["userId", "threadId", "createdAt"]),
 
-  // files: defineTable({
-  //   userId: v.id("users"),
-  //   storageId: v.id("_storage"), // Convex file storage ID
-  //   threadId: v.optional(v.id("threads")), // if file belongs to a thread
-  //   messageId: v.optional(v.id("messages")), // if file belongs to a message
-  //   workspaceId: v.optional(v.id("workspaces")), // if file belongs to a workspace
-  //   name: v.string(),
-  //   mimeType: v.string(),
-  //   byteSize: v.number(),
-  //   metadata: v.optional(flexibleMetadata),
-  //   createdAt: v.number(),
-  //   updatedAt: v.number(),
-  // })
-  //   .index("byThreadId", ["threadId"])
-  //   .index("byMessageId", ["messageId"])
-  //   .index("byWorkspaceId", ["workspaceId"]),
-
-  // threadSnapshots: defineTable({
-  //   threadId: v.id("threads"),
-  //   snapshotData: v.any(), // serialized thread state
-  //   createdBy: v.id("users"),
-  //   description: v.optional(v.string()), // what changed
-  //   snapshotType: v.union(
-  //     v.literal("manual"), // user-created snapshot
-  //     v.literal("auto"), // automatic snapshot
-  //     v.literal("fork") // snapshot created when forking
-  //   ),
-  //   createdAt: v.number(),
-  //   updatedAt: v.number(),
-  // })
-  //   .index("byThreadId", ["threadId"])
-  //   .index("byThreadIdCreatedAt", ["threadId", "createdAt"]),
-
-  // Thread forks/branches (for future branching feature)
-  // threadBranches: defineTable({
-  //   sourceThreadId: v.id("threads"),
-  //   targetThreadId: v.id("threads"),
-  //   userId: v.id("users"),
-  //   branchPoint: v.number(), // message sequence where branch occurred
-  //   reason: v.optional(v.string()), // why was this branch created
-  // })
-  //   .index("bySourceThreadId", ["sourceThreadId"])
-  //   .index("byTargetThreadId", ["targetThreadId"]),
+  // 'json' => string => JSON.parse / JSON.stringify
+  // 'msgpack' => bytes => pack / unpack
+  // 'cvxstorage' =>
+  messageParts: defineTable({
+    userId: v.id("users"),
+    messageId: v.id("messages"),
+    encodedParts: v.union(
+      v.object({
+        source: v.literal("inline"),
+        encoding: v.literal("json"),
+        data: v.string(),
+      }),
+      v.object({
+        source: v.literal("inline"),
+        encoding: v.literal("msgpack"),
+        data: v.bytes(),
+      }),
+      v.object({
+        source: v.literal("cvxstorage"),
+        encoding: v.literal("msgpack"),
+        ref: v.id("_storage"),
+      })
+    ),
+  }).index("byUserIdMessageId", ["userId", "messageId"]),
 });

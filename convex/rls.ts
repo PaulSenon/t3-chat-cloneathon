@@ -29,6 +29,7 @@ async function rlsRules(ctx: QueryCtx) {
         return true;
       },
       insert: async (_, userDoc) => {
+        // Allow adding new user matching current identity
         const identity = await ctx.auth.getUserIdentity();
         if (identity === null) return false;
         if (userDoc.tokenIdentifier !== identity.tokenIdentifier) return false;
@@ -42,31 +43,12 @@ async function rlsRules(ctx: QueryCtx) {
       },
     },
 
-    // Usages table: users can only access their own usage records
-    usages: {
-      read: async (_, usageDoc) => {
-        if (!user) return false;
-        if (usageDoc.userId !== user._id) return false;
-        return true;
-      },
-      insert: async (_, usageDoc) => {
-        if (!user) return false;
-        if (usageDoc.userId !== user._id) return false;
-        return true;
-      },
-      modify: async (_, usageDoc) => {
-        if (!user) return false;
-        if (usageDoc.userId !== user._id) return false;
-        return true;
-      },
-    },
-
     // Threads table: users can only access their own threads (non-deleted)
     threads: {
       read: async (_, threadDoc) => {
         if (!user) return false;
         if (threadDoc.userId !== user._id) return false;
-        if (threadDoc.status === "deleted") return false;
+        if (threadDoc.lifecycleState === "deleted") return false;
         return true;
       },
       insert: async (_, threadDoc) => {
@@ -77,7 +59,47 @@ async function rlsRules(ctx: QueryCtx) {
       modify: async (_, threadDoc) => {
         if (!user) return false;
         if (threadDoc.userId !== user._id) return false;
-        if (threadDoc.status === "deleted") return false;
+        if (threadDoc.lifecycleState === "deleted") return false;
+        return true;
+      },
+    },
+
+    // Messages table: users can only access their own messages (non-deleted)
+    messages: {
+      read: async (_, messageDoc) => {
+        if (!user) return false;
+        if (messageDoc.userId !== user._id) return false;
+        if (messageDoc.lifecycleState === "deleted") return false;
+        return true;
+      },
+      insert: async (_, messageDoc) => {
+        if (!user) return false;
+        if (messageDoc.userId !== user._id) return false;
+        return true;
+      },
+      modify: async (_, messageDoc) => {
+        if (!user) return false;
+        if (messageDoc.userId !== user._id) return false;
+        if (messageDoc.lifecycleState === "deleted") return false;
+        return true;
+      },
+    },
+
+    // MessageParts table: users can only access their own messagesParts
+    messageParts: {
+      read: async (_, messagePartDoc) => {
+        if (!user) return false;
+        if (messagePartDoc.userId !== user._id) return false;
+        return true;
+      },
+      insert: async (_, messagePartDoc) => {
+        if (!user) return false;
+        if (messagePartDoc.userId !== user._id) return false;
+        return true;
+      },
+      modify: async (_, messagePartDoc) => {
+        if (!user) return false;
+        if (messagePartDoc.userId !== user._id) return false;
         return true;
       },
     },
